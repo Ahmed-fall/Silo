@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables - never commit this
+.env
+
+# Database
+*.db
+*.sqlite3
+
+# ML models and datasets - too large for git
+ai-vision/app/model/weights/
+ai-predictive/app/model/model.pkl
+*.pt
+*.pkl
+*.csv
+*.zip
+
+# Uploads folder - user files never go in git
+uploads/
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
