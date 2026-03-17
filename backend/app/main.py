@@ -1,14 +1,13 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.core.database import init_db, close_db
+from app.api import silos
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Runs on startup
     await init_db()
     yield
-    # Runs on shutdown
     await close_db()
 
 
@@ -18,6 +17,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.include_router(silos.router)
 
 
 @app.get("/health")
