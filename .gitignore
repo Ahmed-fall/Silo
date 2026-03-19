@@ -29,6 +29,11 @@ ai-predictive/app/model/model.pkl
 *.csv
 *.zip
 
+# Model weights
+*.keras
+*.pt
+*.h5
+
 # Uploads folder - user files never go in git
 uploads/
 
