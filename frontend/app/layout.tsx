@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AlertProvider } from "@/context/AlertContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { AppSettingsProvider } from "@/context/AppSettingsContext";
 import LiveAlertsPanel from "@/components/LiveAlertsPanel";
 import Sidebar from "@/components/Sidebar";
-
-// ─── Fonts ────────────────────────────────────────────────────────────────────
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -21,55 +21,42 @@ const plusJakarta = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-// ─── Metadata ────────────────────────────────────────────────────────────────
-
 export const metadata: Metadata = {
   title: "Silo — AI Grain Preservation System",
-  description:
-    "Real-time monitoring and intelligent management for national grain preservation infrastructure.",
+  description: "Real-time monitoring and intelligent management for national grain preservation.",
 };
-
-// ─── Root Layout ─────────────────────────────────────────────────────────────
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${outfit.variable} ${plusJakarta.variable} h-full antialiased dark`}
-    >
-      <body className="h-full flex overflow-hidden">
-        <AlertProvider>
-          {/* ── Left sidebar ── */}
-          <Sidebar />
-
-          {/* ── Main area ── */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {/* Topbar */}
-            <header className="
-              shrink-0 flex items-center justify-between
-              px-4 lg:px-6 py-3
-              border-b border-white/[0.04]
-              bg-slate-950/60 backdrop-blur-xl
-            ">
-              {/* Mobile brand */}
-              <div className="flex items-center gap-2 lg:hidden">
-                <span className="font-outfit font-bold text-white text-sm">Silo</span>
+    <html lang="en" className={`${outfit.variable} ${plusJakarta.variable} h-full antialiased dark`}>
+      <body className="h-full flex overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 transition-colors duration-300">
+        <ThemeProvider>
+          <AppSettingsProvider>
+            <AlertProvider>
+              <Sidebar />
+              <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                <header className="
+                  shrink-0 flex items-center justify-between
+                  px-4 lg:px-6 py-3
+                  border-b border-slate-200/50 dark:border-white/[0.04]
+                  bg-white/80 dark:bg-slate-950/60 backdrop-blur-xl
+                  transition-colors duration-300
+                ">
+                  <div className="flex items-center gap-2 lg:hidden">
+                    <span className="font-outfit font-bold text-slate-800 dark:text-white text-sm">Silo</span>
+                  </div>
+                  <div className="hidden lg:block" />
+                  <LiveAlertsPanel />
+                </header>
+                <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+                  {children}
+                </main>
               </div>
-
-              <div className="hidden lg:block" />
-
-              {/* Right: Bell + alerts panel */}
-              <LiveAlertsPanel />
-            </header>
-
-            {/* Page content */}
-            <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-              {children}
-            </main>
-          </div>
-        </AlertProvider>
+            </AlertProvider>
+          </AppSettingsProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
