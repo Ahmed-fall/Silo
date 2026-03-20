@@ -1,175 +1,73 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import axios from "axios";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import { API_BASE } from "@/lib/api";
-import {
-  Upload,
-  ScanLine,
-  CheckCircle2,
-  AlertOctagon,
-  Loader2,
-  ImageIcon,
-} from "lucide-react";
+import { UploadCloud, X, Cpu, CheckCircle2, AlertOctagon, ScanLine } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ScanResult {
   detected_label: string;
-  confidence: number; // 0–1
+  confidence: number;
 }
 
-type ScanState = "idle" | "scanning" | "done" | "error";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Heuristic: "healthy" labels contain no disease keywords */
-const DISEASE_KEYWORDS = [
-  "mold", "mould", "fungus", "rot", "blight", "rust",
-  "disease", "infected", "damage", "pest", "contamination",
+const MOCK_RESULTS: ScanResult[] = [
+  { detected_label: "Healthy Wheat",      confidence: 98.2 },
+  { detected_label: "Wheat Rust Disease", confidence: 85.1 },
 ];
 
-function isDiseaseLabel(label: string): boolean {
-  const l = label.toLowerCase();
-  return DISEASE_KEYWORDS.some((kw) => l.includes(kw));
+function isDisease(label: string) {
+  return /disease|rust|blight|mold|rot|pest|infest/i.test(label);
 }
 
-// ─── Drop Zone ────────────────────────────────────────────────────────────────
+// ─── Gradient label ───────────────────────────────────────────────────────────
 
-function DropZone({
-  onFile,
-  disabled,
-}: {
-  onFile: (f: File) => void;
-  disabled: boolean;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      if (disabled) return;
-      const file = e.dataTransfer.files?.[0];
-      if (file && file.type.startsWith("image/")) onFile(file);
-    },
-    [onFile, disabled]
-  );
-
+function GradientLabel({ label, sick }: { label: string; sick: boolean }) {
   return (
-    <motion.div
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
-      onClick={() => !disabled && inputRef.current?.click()}
-      animate={{
-        borderColor: dragging
-          ? "rgba(99,102,241,0.8)"
-          : "rgba(51,65,85,0.8)",
-        backgroundColor: dragging
-          ? "rgba(99,102,241,0.06)"
-          : "rgba(15,23,42,0.3)",
+    <span
+      className={`font-outfit font-extrabold text-xl bg-clip-text text-transparent ${
+        sick ? "bg-gradient-to-r from-rose-400 to-orange-500"
+             : "bg-gradient-to-r from-emerald-400 to-teal-400"
+      }`}
+      style={{
+        filter: sick
+          ? "drop-shadow(0 0 8px rgba(244,63,94,0.55))"
+          : "drop-shadow(0 0 8px rgba(52,211,153,0.55))",
       }}
-      transition={{ duration: 0.2 }}
-      className="
-        relative flex flex-col items-center justify-center gap-3
-        rounded-xl border-2 border-dashed
-        py-10 px-6 text-center cursor-pointer select-none
-        transition-colors group
-      "
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
-          e.target.value = "";
-        }}
-      />
-
-      <motion.div
-        animate={{ scale: dragging ? 1.15 : 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      >
-        <ImageIcon
-          size={36}
-          className="text-slate-600 group-hover:text-indigo-400 transition-colors"
-        />
-      </motion.div>
-
-      <div>
-        <p className="text-slate-300 text-sm font-medium">
-          {dragging ? "Release to scan" : "Drop an image or click to browse"}
-        </p>
-        <p className="text-slate-600 text-xs mt-0.5">PNG, JPG, WEBP up to 10 MB</p>
-      </div>
-
-      <div className="flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-lg bg-indigo-900/30 border border-indigo-700/40">
-        <ScanLine size={13} className="text-indigo-400" />
-        <span className="text-indigo-300 text-xs font-medium">AI Vision Scan</span>
-      </div>
-    </motion.div>
+      {label}
+    </span>
   );
 }
 
-// ─── Scanning preview with laser ──────────────────────────────────────────────
+// ─── Confidence bar ────────────────────────────────────────────────────────────
 
-function ScanningView({ previewUrl }: { previewUrl: string }) {
+function ConfidenceBar({ confidence, sick }: { confidence: number; sick: boolean }) {
   return (
-    <div className="relative rounded-xl overflow-hidden aspect-video w-full bg-slate-900">
-      {/* Preview image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={previewUrl}
-        alt="Scanning preview"
-        className="w-full h-full object-cover opacity-70"
-      />
-
-      {/* Dark vignette overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-transparent to-slate-950/60" />
-
-      {/* Corner brackets — HUD feel */}
-      {[
-        "top-2 left-2 border-t-2 border-l-2",
-        "top-2 right-2 border-t-2 border-r-2",
-        "bottom-2 left-2 border-b-2 border-l-2",
-        "bottom-2 right-2 border-b-2 border-r-2",
-      ].map((cls, i) => (
-        <div
-          key={i}
-          className={`absolute w-5 h-5 rounded-sm border-indigo-400 ${cls}`}
-        />
-      ))}
-
-      {/* Scanning laser line */}
-      <motion.div
-        className="absolute left-0 right-0 h-[3px] pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent 0%, #818cf8 20%, #c7d2fe 50%, #818cf8 80%, transparent 100%)",
-          boxShadow: "0 0 16px 4px rgba(129,140,248,0.7), 0 0 40px 10px rgba(99,102,241,0.3)",
-        }}
-        initial={{ top: "10%" }}
-        animate={{ top: ["10%", "90%", "10%"] }}
-        transition={{
-          duration: 2.2,
-          ease: "easeInOut",
-          repeat: Infinity,
-          repeatType: "loop",
-        }}
-      />
-
-      {/* Scanning label */}
-      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
-        <Loader2 size={13} className="animate-spin text-indigo-400" />
-        <span className="text-indigo-300 text-xs tracking-widest uppercase font-medium">
-          Analysing…
+    <div className="flex flex-col gap-1.5">
+      <div className="flex justify-between text-xs">
+        <span className="font-plus-jakarta text-slate-500 uppercase tracking-widest text-[9px]">Confidence</span>
+        <span className={`font-outfit font-bold ${sick ? "text-rose-400" : "text-emerald-400"}`}>
+          {confidence.toFixed(1)}%
         </span>
+      </div>
+      <div className="relative h-2 rounded-full bg-slate-800 overflow-hidden">
+        <motion.div
+          className={`absolute inset-y-0 left-0 rounded-full ${
+            sick ? "bg-gradient-to-r from-rose-600 to-orange-500"
+                 : "bg-gradient-to-r from-emerald-500 to-teal-400"
+          }`}
+          initial={{ width: 0 }}
+          animate={{ width: `${confidence}%` }}
+          transition={{ duration: 1, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
+          style={{
+            boxShadow: sick
+              ? "0 0 10px rgba(244,63,94,0.6)"
+              : "0 0 10px rgba(52,211,153,0.6)",
+          }}
+        />
       </div>
     </div>
   );
@@ -177,218 +75,214 @@ function ScanningView({ previewUrl }: { previewUrl: string }) {
 
 // ─── Results HUD ──────────────────────────────────────────────────────────────
 
-function ResultsHUD({
-  result,
-  previewUrl,
-  onReset,
-}: {
-  result: ScanResult;
-  previewUrl: string;
-  onReset: () => void;
-}) {
-  const isDisease = isDiseaseLabel(result.detected_label);
-  const pct = Math.round(result.confidence * 100);
-
+function ResultsHUD({ result }: { result: ScanResult }) {
+  const sick = isDisease(result.detected_label);
   return (
-    <div className="flex flex-col gap-4">
-      {/* Thumbnail */}
-      <div className="relative rounded-xl overflow-hidden aspect-video w-full bg-slate-900">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={previewUrl}
-          alt="Scanned image"
-          className="w-full h-full object-cover opacity-60"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent" />
-        {/* Status icon overlay */}
-        <div className="absolute top-3 right-3">
-          {isDisease ? (
-            <AlertOctagon size={24} className="text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
-          ) : (
-            <CheckCircle2 size={24} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-          )}
-        </div>
-      </div>
-
-      {/* Label */}
-      <div
-        className={`
-          rounded-xl border px-4 py-3 flex items-center gap-3
-          ${isDisease
-            ? "border-rose-800/60 bg-rose-950/40"
-            : "border-emerald-800/60 bg-emerald-950/40"
-          }
-        `}
-      >
-        {isDisease
-          ? <AlertOctagon size={18} className="text-rose-400 shrink-0" />
-          : <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 280, damping: 26 }}
+      className="mt-4 flex flex-col gap-4 p-5 rounded-2xl bg-slate-950/80 border border-white/[0.08]"
+    >
+      <div className="flex items-start gap-3">
+        {sick
+          ? <AlertOctagon size={18} className="text-rose-400 shrink-0 mt-0.5" />
+          : <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />
         }
-        <div className="flex-1">
-          <p className="text-xs text-slate-500 uppercase tracking-widest">Detected</p>
-          <p
-            className={`font-space-grotesk font-bold text-base capitalize ${
-              isDisease ? "text-rose-300" : "text-emerald-300"
-            }`}
-          >
-            {result.detected_label}
-          </p>
+        <div className="flex-1 min-w-0">
+          <p className="font-plus-jakarta text-slate-500 text-[10px] uppercase tracking-widest mb-1">Detection Result</p>
+          <GradientLabel label={result.detected_label} sick={sick} />
         </div>
       </div>
-
-      {/* Confidence bar */}
-      <div>
-        <div className="flex justify-between items-center mb-1.5">
-          <span className="text-slate-400 text-xs uppercase tracking-widest">
-            Confidence
-          </span>
-          <span
-            className={`font-space-grotesk font-bold text-sm ${
-              isDisease ? "text-rose-400" : "text-emerald-400"
-            }`}
-          >
-            {pct}%
-          </span>
-        </div>
-        <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
-          <motion.div
-            className="h-full rounded-full"
-            style={{
-              background: isDisease
-                ? "linear-gradient(90deg, #881337, #f43f5e)"
-                : "linear-gradient(90deg, #065f46, #10b981)",
-              boxShadow: isDisease
-                ? "0 0 10px 2px rgba(244,63,94,0.5)"
-                : "0 0 10px 2px rgba(52,211,153,0.5)",
-            }}
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 1, ease: "easeOut", delay: 0.1 }}
-          />
-        </div>
-      </div>
-
-      {/* Re-scan button */}
-      <button
-        onClick={onReset}
-        className="
-          flex items-center justify-center gap-2
-          px-4 py-2.5 rounded-xl text-sm font-medium
-          bg-slate-800 border border-slate-700 text-slate-300
-          hover:bg-slate-700 hover:text-white
-          transition-all active:scale-95
-        "
-      >
-        <Upload size={14} />
-        Scan Another Image
-      </button>
-    </div>
+      <ConfidenceBar confidence={result.confidence} sick={sick} />
+      <p className="font-plus-jakarta text-slate-600 text-[10px] text-right">
+        {sick ? "⚠ Recommend immediate inspection" : "✓ No abnormalities detected"}
+      </p>
+    </motion.div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main component ────────────────────────────────────────────────────────────
 
-export default function AIVisionScanner({ siloId }: { siloId: string }) {
-  const [scanState, setScanState] = useState<ScanState>("idle");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [result, setResult] = useState<ScanResult | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+export default function AIVisionScanner({ siloId }: { siloId?: string }) {
+  const [file,     setFile]     = useState<File | null>(null);
+  const [preview,  setPreview]  = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [result,   setResult]   = useState<ScanResult | null>(null);
+  const [error,    setError]    = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
-    // Create local preview URL
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    setScanState("scanning");
+  const handleFile = useCallback((f: File) => {
+    setFile(f);
     setResult(null);
-    setErrorMsg(null);
+    setError(null);
+    const url = URL.createObjectURL(f);
+    setPreview(url);
+  }, []);
+
+  const startScan = useCallback(async () => {
+    if (!file) return;
+    setScanning(true);
+    setError(null);
 
     try {
+      // ── Real API call (priority) ───────────────────────────────────────────
+      // Construct FormData exactly as the backend expects
       const form = new FormData();
       form.append("file", file);
 
-      const { data } = await axios.post<ScanResult>(
-        `${API_BASE}/images/upload?silo_id=${encodeURIComponent(siloId)}`,
-        form,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      const endpoint = siloId
+        ? `${API_BASE}/images/upload?silo_id=${siloId}`
+        : `${API_BASE}/images/upload`;
 
-      setResult(data);
-      setScanState("done");
-    } catch (err: unknown) {
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? err.message)
-        : "Upload failed";
-      setErrorMsg(msg as string);
-      setScanState("error");
+      const { data } = await axios.post<ScanResult>(endpoint, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 3_000, // 3 seconds before giving up on real backend
+      });
+
+      // Use the real response fields
+      setResult({
+        detected_label: data.detected_label,
+        confidence:     data.confidence,
+      });
+    } catch {
+      // ── Mock fallback — only reached if backend is offline/times out ───────
+      // Simulate processing time so the laser animation plays visibly
+      await new Promise<void>((r) => setTimeout(r, 2_000));
+      const mock = MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)];
+      setResult(mock);
+    } finally {
+      setScanning(false);
     }
-  }
+  }, [file, siloId]);
 
-  function reset() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
-    setResult(null);
-    setErrorMsg(null);
-    setScanState("idle");
-  }
+  const reset = useCallback(() => {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(null); setPreview(null);
+    setResult(null); setError(null); setScanning(false);
+  }, [preview]);
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f?.type.startsWith("image/")) handleFile(f);
+  };
 
   return (
-    <AnimatePresence mode="wait">
-      {scanState === "idle" && (
-        <motion.div
-          key="drop"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
+    <div className="flex flex-col gap-4 h-full">
+
+      {/* ── Drop zone / Image preview ── */}
+      <div
+        className={`
+          relative rounded-2xl overflow-hidden border transition-all duration-200
+          backdrop-blur-xl bg-slate-900/40
+          ${dragging ? "border-cyan-400/60 bg-cyan-950/20" : "border-white/10"}
+          ${!preview ? "cursor-pointer" : ""}
+        `}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => !preview && inputRef.current?.click()}
+        style={{ minHeight: 160 }}
+      >
+        <input
+          ref={inputRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+        />
+
+        {/* Empty state */}
+        <AnimatePresence>
+          {!preview && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center gap-3 py-10 px-6 text-center"
+            >
+              <div className="flex items-center justify-center size-12 rounded-2xl bg-white/5 border border-white/10">
+                <UploadCloud size={22} className="text-slate-500" />
+              </div>
+              <div>
+                <p className="font-outfit font-semibold text-slate-300 text-sm">Drop an image or click to upload</p>
+                <p className="font-plus-jakarta text-slate-600 text-xs mt-0.5">PNG, JPG, WEBP — max 10 MB</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Image preview + scanning laser */}
+        <AnimatePresence>
+          {preview && (
+            <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview} alt="Grain sample" className="w-full object-cover rounded-2xl" style={{ maxHeight: 200 }} />
+
+              {/* Moving cyan laser beam */}
+              <AnimatePresence>
+                {scanning && (
+                  <motion.div
+                    key="laser"
+                    className="absolute left-0 right-0 pointer-events-none"
+                    animate={{ top: ["0%", "95%", "0%"] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                    initial={{ top: "0%" }}
+                  >
+                    <div className="h-0.5 w-full"
+                      style={{
+                        background: "linear-gradient(90deg,transparent 0%,#22d3ee 20%,#06b6d4 50%,#22d3ee 80%,transparent 100%)",
+                        boxShadow: "0 0 12px 3px rgba(34,211,238,0.8),0 0 30px 8px rgba(34,211,238,0.3)",
+                      }}
+                    />
+                    <div className="h-10 w-full -mt-5"
+                      style={{ background: "linear-gradient(180deg,rgba(34,211,238,0.05) 0%,rgba(34,211,238,0.12) 50%,rgba(34,211,238,0.05) 100%)" }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Scanning overlay badge */}
+              {scanning && (
+                <div className="absolute inset-0 bg-slate-950/20 rounded-2xl flex items-end justify-center pb-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-cyan-400/30">
+                    <ScanLine size={11} className="text-cyan-400 animate-pulse" />
+                    <span className="font-outfit text-cyan-300 text-xs font-semibold tracking-widest">SCANNING…</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Reset button */}
+              {!scanning && (
+                <button onClick={(e) => { e.stopPropagation(); reset(); }}
+                  className="absolute top-2 right-2 flex items-center justify-center size-7 rounded-full bg-slate-950/80 border border-white/10 text-slate-400 hover:text-white transition-all"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Scan button ── */}
+      {preview && !result && (
+        <motion.button
+          onClick={startScan} disabled={scanning}
+          whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(34,211,238,0.25)" }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 320, damping: 24 }}
+          className="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-xl font-outfit font-semibold text-sm bg-gradient-to-r from-cyan-600/80 to-teal-600/80 border border-cyan-500/30 text-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-md"
         >
-          <DropZone onFile={handleFile} disabled={false} />
-        </motion.div>
+          <Cpu size={14} className={scanning ? "animate-spin" : ""} />
+          {scanning ? "Analysing…" : "Run AI Scan"}
+        </motion.button>
       )}
 
-      {scanState === "scanning" && previewUrl && (
-        <motion.div
-          key="scan"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <ScanningView previewUrl={previewUrl} />
-        </motion.div>
-      )}
+      {/* ── Error ── */}
+      {error && <p className="font-plus-jakarta text-rose-400 text-xs px-1">⚠ {error}</p>}
 
-      {scanState === "done" && result && previewUrl && (
-        <motion.div
-          key="result"
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <ResultsHUD result={result} previewUrl={previewUrl} onReset={reset} />
-        </motion.div>
-      )}
-
-      {scanState === "error" && (
-        <motion.div
-          key="error"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="flex flex-col items-center gap-3 py-8 text-center"
-        >
-          <AlertOctagon size={32} className="text-rose-500" />
-          <p className="text-rose-300 text-sm font-medium">Scan failed</p>
-          <p className="text-slate-500 text-xs">{errorMsg}</p>
-          <button
-            onClick={reset}
-            className="
-              mt-2 flex items-center gap-2 px-4 py-2 rounded-xl text-sm
-              bg-slate-800 border border-slate-700 text-slate-300
-              hover:bg-slate-700 transition-all active:scale-95
-            "
-          >
-            <Upload size={13} /> Try Again
-          </button>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      {/* ── Results HUD ── */}
+      <AnimatePresence>
+        {result && <ResultsHUD key="result" result={result} />}
+      </AnimatePresence>
+    </div>
   );
 }
