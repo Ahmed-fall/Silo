@@ -1,9 +1,10 @@
 "use client";
 
 import { useAlerts } from "@/context/AlertContext";
+import { useSettings } from "@/context/SettingsContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
-import { AlertTriangle, Flame, Bell, Info, Wifi, WifiOff, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, Flame, Bell, BellOff, Info, Wifi, WifiOff, CheckCircle2, Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ const SEV = {
 // ─── Dynamic Island pill ──────────────────────────────────────────────────────
 // Shown at top-center. Morphs on new alerts.
 
-function DynamicIsland() {
+function DynamicIsland({ muted }: { muted: boolean }) {
   const { alerts, unreadCount, isConnected } = useAlerts();
   const [expanded, setExpanded] = useState(false);
   const prevLen = useRef(alerts.length);
@@ -57,6 +58,16 @@ function DynamicIsland() {
   }, [alerts.length]);
 
   const sevCfg = latest ? SEV[latest.severity as Severity] : SEV.info;
+
+  // When muted, show a small greyed pill
+  if (muted) {
+    return (
+      <div className="flex items-center gap-2 px-3 h-9 rounded-full bg-slate-900/70 border border-white/[0.05]">
+        <BellOff size={12} className="text-slate-600" />
+        <span className="font-outfit text-slate-600 text-xs">Muted</span>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -183,29 +194,32 @@ function AlertRow({ alert, onMark, pending }: {
 
 export default function LiveAlertsPanel() {
   const { alerts, unreadCount, markAsRead, markingIds, markError, isConnected } = useAlerts();
+  const { alertsMuted } = useSettings();
   const [panelOpen, setPanelOpen] = useState(false);
 
   return (
     <>
       {/* ── Dynamic Island: top-center floating pill ── */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-        <DynamicIsland />
+        <DynamicIsland muted={alertsMuted} />
       </div>
 
-      {/* ── Bell button in topbar (passed from parent via slot) ── */}
+      {/* ── Bell button in topbar ── */}
       <div className="relative">
         <button
           onClick={() => setPanelOpen((v) => !v)}
-          className="
+          className={`
             relative flex items-center justify-center size-9 rounded-xl
-            bg-white/[0.04] border border-white/[0.07]
-            text-slate-500 hover:text-slate-200
-            transition-all hover:bg-white/[0.08] active:scale-95
-          "
+            border transition-all active:scale-95
+            ${alertsMuted
+              ? "bg-white/[0.02] border-white/[0.04] text-slate-700"
+              : "bg-white/[0.04] border-white/[0.07] text-slate-500 hover:text-slate-200 hover:bg-white/[0.08]"}
+          `}
           aria-label="Toggle alerts panel"
         >
-          <Bell size={16} />
-          {unreadCount > 0 && (
+          {alertsMuted ? <BellOff size={16} /> : <Bell size={16} />}
+          {/* Badge — hidden when muted */}
+          {!alertsMuted && unreadCount > 0 && (
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
