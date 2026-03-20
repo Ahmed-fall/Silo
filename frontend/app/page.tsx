@@ -71,7 +71,7 @@ export default function SilosDashboard() {
   const fetchSilos = useCallback(async () => {
     setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 6_000 });
+      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 2_000 });
       if (isMounted.current) setSilos(data);
     } catch {
       if (isMounted.current) { setSilos(MOCK_SILOS); setUsingMock(true); }

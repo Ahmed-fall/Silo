@@ -1,288 +1,189 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { UploadCloud, Scan, AlertTriangle, CheckCircle, X } from "lucide-react";
 import axios from "axios";
-import { API_BASE } from "@/lib/api";
-import { UploadCloud, X, Cpu, CheckCircle2, AlertOctagon, ScanLine } from "lucide-react";
+import { API_BASE } from "@/lib/api"; // Adjust path if needed
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+interface AIVisionScannerProps {
+  siloId: string;
+}
 
 interface ScanResult {
-  detected_label: string;
+  label: string;
   confidence: number;
+  isIssue: boolean;
 }
 
-const MOCK_RESULTS: ScanResult[] = [
-  { detected_label: "Healthy Wheat",      confidence: 98.2 },
-  { detected_label: "Wheat Rust Disease", confidence: 85.1 },
-];
+export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-function isDisease(label: string) {
-  return /disease|rust|blight|mold|rot|pest|infest/i.test(label);
-}
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
+      setResult(null); // Reset previous results
+    }
+  };
 
-// ─── Gradient label ───────────────────────────────────────────────────────────
-
-function GradientLabel({ label, sick }: { label: string; sick: boolean }) {
-  return (
-    <span
-      className={`font-outfit font-extrabold text-xl bg-clip-text text-transparent ${
-        sick ? "bg-gradient-to-r from-rose-400 to-orange-500"
-             : "bg-gradient-to-r from-emerald-400 to-teal-400"
-      }`}
-      style={{
-        filter: sick
-          ? "drop-shadow(0 0 8px rgba(244,63,94,0.55))"
-          : "drop-shadow(0 0 8px rgba(52,211,153,0.55))",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-// ─── Confidence bar ────────────────────────────────────────────────────────────
-
-function ConfidenceBar({ confidence, sick }: { confidence: number; sick: boolean }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex justify-between text-xs">
-        <span className="font-plus-jakarta text-slate-500 uppercase tracking-widest text-[9px]">Confidence</span>
-        <span className={`font-outfit font-bold ${sick ? "text-rose-400" : "text-emerald-400"}`}>
-          {confidence.toFixed(1)}%
-        </span>
-      </div>
-      <div className="relative h-2 rounded-full bg-slate-800 overflow-hidden">
-        <motion.div
-          className={`absolute inset-y-0 left-0 rounded-full ${
-            sick ? "bg-gradient-to-r from-rose-600 to-orange-500"
-                 : "bg-gradient-to-r from-emerald-500 to-teal-400"
-          }`}
-          initial={{ width: 0 }}
-          animate={{ width: `${confidence}%` }}
-          transition={{ duration: 1, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
-          style={{
-            boxShadow: sick
-              ? "0 0 10px rgba(244,63,94,0.6)"
-              : "0 0 10px rgba(52,211,153,0.6)",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─── Results HUD ──────────────────────────────────────────────────────────────
-
-function ResultsHUD({ result }: { result: ScanResult }) {
-  const sick = isDisease(result.detected_label);
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 280, damping: 26 }}
-      className="mt-4 flex flex-col gap-4 p-5 rounded-2xl bg-slate-950/80 border border-white/[0.08]"
-    >
-      <div className="flex items-start gap-3">
-        {sick
-          ? <AlertOctagon size={18} className="text-rose-400 shrink-0 mt-0.5" />
-          : <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />
-        }
-        <div className="flex-1 min-w-0">
-          <p className="font-plus-jakarta text-slate-500 text-[10px] uppercase tracking-widest mb-1">Detection Result</p>
-          <GradientLabel label={result.detected_label} sick={sick} />
-        </div>
-      </div>
-      <ConfidenceBar confidence={result.confidence} sick={sick} />
-      <p className="font-plus-jakarta text-slate-600 text-[10px] text-right">
-        {sick ? "⚠ Recommend immediate inspection" : "✓ No abnormalities detected"}
-      </p>
-    </motion.div>
-  );
-}
-
-// ─── Main component ────────────────────────────────────────────────────────────
-
-export default function AIVisionScanner({ siloId }: { siloId?: string }) {
-  const [file,     setFile]     = useState<File | null>(null);
-  const [preview,  setPreview]  = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
-  const [result,   setResult]   = useState<ScanResult | null>(null);
-  const [error,    setError]    = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = useCallback((f: File) => {
-    setFile(f);
+  const clearSelection = () => {
+    setFile(null);
+    setPreview(null);
     setResult(null);
-    setError(null);
-    const url = URL.createObjectURL(f);
-    setPreview(url);
-  }, []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
-  const startScan = useCallback(async () => {
+  const triggerScan = async () => {
     if (!file) return;
-    setScanning(true);
-    setError(null);
+    setIsScanning(true);
+    setResult(null);
+
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("silo_id", siloId);
 
     try {
-      // ── Real API call (priority) ───────────────────────────────────────────
-      // Construct FormData exactly as the backend expects
-      const form = new FormData();
-      form.append("file", file);
-
-      const endpoint = siloId
-        ? `${API_BASE}/images/upload?silo_id=${siloId}`
-        : `${API_BASE}/images/upload`;
-
-      const { data } = await axios.post<ScanResult>(endpoint, form, {
+      // 1. DYNAMIC API FIRST: Try hitting the real backend with a 3-second timeout
+      const res = await axios.post(`${API_BASE}/images/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 3_000, // 3 seconds before giving up on real backend
+        timeout: 3000, 
       });
 
-      // Use the real response fields
+      // Assuming success, parse the real data
+      const isIssue = res.data.detected_label.toLowerCase().includes("disease") || 
+                      res.data.detected_label.toLowerCase().includes("rust");
+                      
       setResult({
-        detected_label: data.detected_label,
-        confidence:     data.confidence,
+        label: res.data.detected_label,
+        confidence: res.data.confidence,
+        isIssue,
       });
-    } catch {
-      // ── Mock fallback — only reached if backend is offline/times out ───────
-      // Simulate processing time so the laser animation plays visibly
-      await new Promise<void>((r) => setTimeout(r, 2_000));
-      const mock = MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)];
-      setResult(mock);
+
+    } catch (error) {
+      console.warn("Backend unavailable or timed out. Falling back to Mock Data.", error);
+      
+      // 2. MOCK FALLBACK: Simulate a slight processing delay, then return mock data
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      // Randomize slightly for demo realism
+      const mockIsIssue = Math.random() > 0.5;
+      setResult({
+        label: mockIsIssue ? "Wheat Rust Detected" : "Healthy Crop",
+        confidence: mockIsIssue ? 88.5 : 97.2,
+        isIssue: mockIsIssue,
+      });
     } finally {
-      setScanning(false);
+      setIsScanning(false);
     }
-  }, [file, siloId]);
-
-  const reset = useCallback(() => {
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(null); setPreview(null);
-    setResult(null); setError(null); setScanning(false);
-  }, [preview]);
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragging(false);
-    const f = e.dataTransfer.files[0];
-    if (f?.type.startsWith("image/")) handleFile(f);
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-
-      {/* ── Drop zone / Image preview ── */}
-      <div
-        className={`
-          relative rounded-2xl overflow-hidden border transition-all duration-200
-          backdrop-blur-xl bg-slate-900/40
-          ${dragging ? "border-cyan-400/60 bg-cyan-950/20" : "border-white/10"}
-          ${!preview ? "cursor-pointer" : ""}
-        `}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={() => !preview && inputRef.current?.click()}
-        style={{ minHeight: 160 }}
-      >
-        <input
-          ref={inputRef} type="file" accept="image/*" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-        />
-
-        {/* Empty state */}
-        <AnimatePresence>
-          {!preview && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center gap-3 py-10 px-6 text-center"
-            >
-              <div className="flex items-center justify-center size-12 rounded-2xl bg-white/5 border border-white/10">
-                <UploadCloud size={22} className="text-slate-500" />
-              </div>
-              <div>
-                <p className="font-outfit font-semibold text-slate-300 text-sm">Drop an image or click to upload</p>
-                <p className="font-plus-jakarta text-slate-600 text-xs mt-0.5">PNG, JPG, WEBP — max 10 MB</p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Image preview + scanning laser */}
-        <AnimatePresence>
-          {preview && (
-            <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="Grain sample" className="w-full object-cover rounded-2xl" style={{ maxHeight: 200 }} />
-
-              {/* Moving cyan laser beam */}
-              <AnimatePresence>
-                {scanning && (
-                  <motion.div
-                    key="laser"
-                    className="absolute left-0 right-0 pointer-events-none"
-                    animate={{ top: ["0%", "95%", "0%"] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-                    initial={{ top: "0%" }}
-                  >
-                    <div className="h-0.5 w-full"
-                      style={{
-                        background: "linear-gradient(90deg,transparent 0%,#22d3ee 20%,#06b6d4 50%,#22d3ee 80%,transparent 100%)",
-                        boxShadow: "0 0 12px 3px rgba(34,211,238,0.8),0 0 30px 8px rgba(34,211,238,0.3)",
-                      }}
-                    />
-                    <div className="h-10 w-full -mt-5"
-                      style={{ background: "linear-gradient(180deg,rgba(34,211,238,0.05) 0%,rgba(34,211,238,0.12) 50%,rgba(34,211,238,0.05) 100%)" }}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Scanning overlay badge */}
-              {scanning && (
-                <div className="absolute inset-0 bg-slate-950/20 rounded-2xl flex items-end justify-center pb-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-cyan-400/30">
-                    <ScanLine size={11} className="text-cyan-400 animate-pulse" />
-                    <span className="font-outfit text-cyan-300 text-xs font-semibold tracking-widest">SCANNING…</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Reset button */}
-              {!scanning && (
-                <button onClick={(e) => { e.stopPropagation(); reset(); }}
-                  className="absolute top-2 right-2 flex items-center justify-center size-7 rounded-full bg-slate-950/80 border border-white/10 text-slate-400 hover:text-white transition-all"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <div className="flex flex-col h-full p-6 backdrop-blur-xl bg-slate-900/40 border border-white/10 rounded-3xl shadow-2xl">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold tracking-tight text-slate-100 font-outfit">
+          AI Vision Scanner
+        </h3>
+        <Scan className="w-5 h-5 text-cyan-400" />
       </div>
 
-      {/* ── Scan button ── */}
-      {preview && !result && (
-        <motion.button
-          onClick={startScan} disabled={scanning}
-          whileHover={{ scale: 1.02, boxShadow: "0 0 20px rgba(34,211,238,0.25)" }}
-          whileTap={{ scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 320, damping: 24 }}
-          className="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-xl font-outfit font-semibold text-sm bg-gradient-to-r from-cyan-600/80 to-teal-600/80 border border-cyan-500/30 text-cyan-50 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-md"
+      {!preview ? (
+        <div 
+          onClick={() => fileInputRef.current?.click()}
+          className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-700/50 hover:border-cyan-500/50 rounded-2xl bg-slate-800/20 cursor-pointer transition-colors group p-8"
         >
-          <Cpu size={14} className={scanning ? "animate-spin" : ""} />
-          {scanning ? "Analysing…" : "Run AI Scan"}
-        </motion.button>
+          <UploadCloud className="w-12 h-12 text-slate-500 group-hover:text-cyan-400 transition-colors mb-4" />
+          <p className="text-sm text-slate-400 font-medium">Click or drag image to upload</p>
+          <p className="text-xs text-slate-500 mt-2">Supports JPG, PNG (Max 5MB)</p>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept="image/*" 
+            className="hidden" 
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col space-y-4">
+          <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt="Crop Preview" className="object-cover w-full h-full opacity-80" />
+            
+            {/* Scanning Laser Animation */}
+            <AnimatePresence>
+              {isScanning && (
+                <motion.div
+                  initial={{ top: "0%" }}
+                  animate={{ top: "100%" }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear", repeatType: "reverse" }}
+                  className="absolute left-0 right-0 h-1 bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,1)] z-10"
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Clear Button */}
+            {!isScanning && (
+              <button 
+                onClick={clearSelection}
+                className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/80 backdrop-blur-md rounded-full text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Controls & Results */}
+          <div className="flex-1 flex flex-col justify-end">
+            {!result && !isScanning && (
+              <button 
+                onClick={triggerScan}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+              >
+                Analyze Image
+              </button>
+            )}
+
+            {isScanning && (
+              <div className="flex items-center justify-center py-3 text-cyan-400 font-medium animate-pulse">
+                Processing via Silo AI...
+              </div>
+            )}
+
+            {/* Results HUD */}
+            {result && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 rounded-xl bg-slate-950/50 border border-slate-800"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center space-x-2">
+                    {result.isIssue ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-400" />}
+                    <span className={`font-semibold ${result.isIssue ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      {result.label}
+                    </span>
+                  </div>
+                  <span className="text-slate-300 font-medium">{result.confidence.toFixed(1)}%</span>
+                </div>
+                {/* Confidence Progress Bar */}
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${result.confidence}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`h-full ${result.isIssue ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]' : 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]'}`}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
       )}
-
-      {/* ── Error ── */}
-      {error && <p className="font-plus-jakarta text-rose-400 text-xs px-1">⚠ {error}</p>}
-
-      {/* ── Results HUD ── */}
-      <AnimatePresence>
-        {result && <ResultsHUD key="result" result={result} />}
-      </AnimatePresence>
     </div>
   );
 }
