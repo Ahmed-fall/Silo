@@ -4,13 +4,9 @@ import Link from "next/link";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useEffect, useRef } from "react";
 import {
-  Wheat,
-  AlertTriangle,
-  ShieldCheck,
-  ShieldAlert,
-  Flame,
-  MapPin,
+  AlertTriangle, ShieldCheck, Flame, MapPin, ShieldAlert,
 } from "lucide-react";
+import CropIcon from "@/components/CropIcon";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,216 +17,126 @@ export interface Silo {
   name: string;
   location: string;
   risk_level: RiskLevel;
+  crop_type?: string;
 }
 
-// ─── Risk-level style map ─────────────────────────────────────────────────────
+// ─── Risk config ──────────────────────────────────────────────────────────────
 
-const RISK_CONFIG: Record<
-  RiskLevel,
-  {
-    /* conic-gradient colour stops for the spinning border */
-    from: string;
-    via: string;
-    to: string;
-    /* tailwind glow shadow */
-    shadow: string;
-    /* badge */
-    badgeBg: string;
-    badgeText: string;
-    label: string;
-    icon: React.ReactNode;
-  }
-> = {
+const RISK_CONFIG = {
   none: {
-    from: "#64748b",
-    via: "#94a3b8",
-    to: "#1e293b",
-    shadow: "0 0 32px 4px rgba(100,116,139,0.35)",
-    badgeBg: "bg-slate-700/60",
-    badgeText: "text-slate-300",
+    from: "#64748b", via: "#94a3b8", to: "#1e293b",
+    shadow: "0 0 32px 4px rgba(100,116,139,0.30)",
+    badgeBg: "bg-slate-800/60", badgeText: "text-slate-400",
     label: "Nominal",
-    icon: <ShieldCheck size={20} className="text-slate-400" />,
+    icon: <ShieldCheck size={12} className="text-slate-400" />,
   },
   low: {
-    from: "#34d399",
-    via: "#2dd4bf",
-    to: "#065f46",
-    shadow: "0 0 36px 6px rgba(52,211,153,0.4)",
-    badgeBg: "bg-emerald-900/50",
-    badgeText: "text-emerald-300",
+    from: "#34d399", via: "#2dd4bf", to: "#065f46",
+    shadow: "0 0 40px 6px rgba(52,211,153,0.35)",
+    badgeBg: "bg-emerald-950/60", badgeText: "text-emerald-300",
     label: "Low Risk",
-    icon: <ShieldCheck size={20} className="text-emerald-400" />,
+    icon: <ShieldCheck size={12} className="text-emerald-400" />,
   },
   medium: {
-    from: "#fbbf24",
-    via: "#f97316",
-    to: "#92400e",
-    shadow: "0 0 36px 6px rgba(251,191,36,0.4)",
-    badgeBg: "bg-amber-900/50",
-    badgeText: "text-amber-300",
+    from: "#fbbf24", via: "#f97316", to: "#92400e",
+    shadow: "0 0 40px 6px rgba(251,191,36,0.35)",
+    badgeBg: "bg-amber-950/60", badgeText: "text-amber-300",
     label: "Medium Risk",
-    icon: <AlertTriangle size={20} className="text-amber-400" />,
+    icon: <AlertTriangle size={12} className="text-amber-400" />,
   },
   high: {
-    from: "#fb7185",
-    via: "#f43f5e",
-    to: "#881337",
-    shadow: "0 0 40px 8px rgba(244,63,94,0.55)",
-    badgeBg: "bg-rose-900/50",
-    badgeText: "text-rose-300",
+    from: "#fb7185", via: "#f43f5e", to: "#881337",
+    shadow: "0 0 48px 8px rgba(244,63,94,0.50)",
+    badgeBg: "bg-rose-950/60", badgeText: "text-rose-300",
     label: "High Risk",
-    icon: <Flame size={20} className="text-rose-400" />,
+    icon: <Flame size={12} className="text-rose-400" />,
   },
-};
-
-// ─── Animated border hook ─────────────────────────────────────────────────────
-// Drives a CSS custom property `--angle` from 0° → 360° on a loop.
-// Speed is controlled by `duration`.
-
-function useSpinBorder(
-  ref: React.RefObject<HTMLDivElement | null>,
-  duration: number
-) {
-  const angle = useMotionValue(0);
-  const angleStr = useTransform(angle, (v) => `${v}deg`);
-
-  useEffect(() => {
-    let ctrl: ReturnType<typeof animate>;
-
-    function startLoop(from: number) {
-      ctrl = animate(angle, from + 360, {
-        duration,
-        ease: "linear",
-        onComplete: () => startLoop(from + 360),
-      });
-    }
-
-    startLoop(angle.get());
-    return () => ctrl?.stop();
-  }, [angle, duration]);
-
-  // Write the CSS custom property onto the DOM node whenever the value changes
-  useEffect(() => {
-    return angleStr.on("change", (v) => {
-      if (ref.current) ref.current.style.setProperty("--angle", v);
-    });
-  }, [angleStr, ref]);
-}
+} satisfies Record<RiskLevel, unknown>;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SiloCard({ silo }: { silo: Silo }) {
   const cfg = RISK_CONFIG[silo.risk_level];
 
-  // Two separate refs + spin hooks — idle (3 s) and hover (0.9 s)
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const idleAngle = useMotionValue(0);
-  const hoverAngle = useMotionValue(0);
-  const isHoveredRef = useRef(false);
-
-  // Single spinning angle that we manually control
-  const spinAngle = useMotionValue(0);
-  const angleStr = useTransform(spinAngle, (v) => `${v}deg`);
-
-  // Track the current animation controller so we can .stop() it
-  const ctrlRef = useRef<ReturnType<typeof animate> | null>(null);
+  const spinAngle  = useMotionValue(0);
+  const angleStr   = useTransform(spinAngle, (v) => `${v}deg`);
+  const ctrlRef    = useRef<ReturnType<typeof animate> | null>(null);
+  const hovered    = useRef(false);
 
   function startLoop(from: number, dur: number) {
     ctrlRef.current?.stop();
     ctrlRef.current = animate(spinAngle, from + 360, {
-      duration: dur,
-      ease: "linear",
-      onComplete: () => startLoop(spinAngle.get(), isHoveredRef.current ? 0.9 : 3),
+      duration: dur, ease: "linear",
+      onComplete: () => startLoop(spinAngle.get(), hovered.current ? 0.85 : 3.5),
     });
   }
 
-  // Suppress unused-variable warnings
-  void idleAngle;
-  void hoverAngle;
-
   useEffect(() => {
-    startLoop(0, 3);
+    startLoop(0, 3.5);
     return () => ctrlRef.current?.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Push angle to CSS custom property
-  useEffect(() => {
-    return angleStr.on("change", (v) => {
-      if (wrapperRef.current) wrapperRef.current.style.setProperty("--angle", v);
-    });
-  }, [angleStr]);
-
-  function handleHoverStart() {
-    isHoveredRef.current = true;
-    startLoop(spinAngle.get(), 0.9);
-  }
-
-  function handleHoverEnd() {
-    isHoveredRef.current = false;
-    startLoop(spinAngle.get(), 3);
-  }
+  useEffect(() =>
+    angleStr.on("change", (v) => {
+      wrapperRef.current?.style.setProperty("--angle", v);
+    }), [angleStr]);
 
   return (
     <Link href={`/silos/${silo.id}`} className="block focus:outline-none group">
       <motion.div
-        onHoverStart={handleHoverStart}
-        onHoverEnd={handleHoverEnd}
-        whileHover={{ scale: 1.025 }}
-        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+        onHoverStart={() => { hovered.current = true;  startLoop(spinAngle.get(), 0.85); }}
+        onHoverEnd={()  => { hovered.current = false; startLoop(spinAngle.get(), 3.5);  }}
+        whileHover={{ y: -4, scale: 1.015 }}
+        transition={{ type: "spring", stiffness: 280, damping: 22 }}
         className="relative h-full"
-        style={{
-          // Applied on hover via CSS variable written by motion
-          "--glow": cfg.shadow,
-        } as React.CSSProperties}
       >
-        {/* ── Animated border wrapper ─────────────────────────────────────── */}
+        {/* ── Spinning border shell ── */}
         <div
           ref={wrapperRef}
-          className="relative rounded-2xl p-[2px] overflow-hidden h-full"
-          style={
-            {
-              /* The spinning border is a conic-gradient behind the card.
-                 --angle is written by the Framer Motion listener above. */
-              background: `conic-gradient(from var(--angle, 0deg), ${cfg.from}, ${cfg.via}, ${cfg.to}, ${cfg.from})`,
-            } as React.CSSProperties
-          }
+          className="relative rounded-[22px] p-[1.5px] overflow-hidden h-full"
+          style={{
+            background: `conic-gradient(from var(--angle,0deg), ${cfg.from}, ${cfg.via}, ${cfg.to}, ${cfg.from})`,
+          } as React.CSSProperties}
         >
-          {/* ── Card face ──────────────────────────────────────────────────── */}
+          {/* ── Card face ── */}
           <motion.div
+            whileHover={{ boxShadow: cfg.shadow }}
+            transition={{ duration: 0.35 }}
             className="
-              relative h-full rounded-[14px]
-              bg-slate-950
-              px-5 py-5
-              flex flex-col gap-4
+              relative h-full rounded-[21px]
+              bg-slate-950/95
+              flex flex-col
+              pt-6 pb-5 px-5
+              gap-4
+              shadow-float
             "
-            /* Glow shadow fades in on hover */
-            whileHover={{
-              boxShadow: cfg.shadow,
-            }}
-            transition={{ duration: 0.3 }}
           >
-            {/* Header */}
+            {/* Header row: crop icon + risk badge */}
             <div className="flex items-start justify-between gap-2">
-              {/* Icon bubble */}
-              <div
-                className="
-                  flex items-center justify-center
-                  size-10 rounded-xl shrink-0
-                  bg-slate-900 border border-slate-800
-                "
-              >
-                <Wheat size={20} className="text-slate-400 group-hover:text-slate-200 transition-colors" />
+              {/* Crop icon bubble */}
+              <div className="
+                flex items-center justify-center
+                size-11 rounded-2xl shrink-0
+                bg-slate-900/80 border border-white/[0.06]
+                shadow-[0_2px_12px_rgba(0,0,0,0.5)]
+                text-slate-400 group-hover:text-slate-200 transition-colors
+              ">
+                <CropIcon
+                  crop={silo.crop_type ?? "wheat"}
+                  size={24}
+                  className="text-current"
+                />
               </div>
 
               {/* Risk badge */}
-              <span
-                className={`
-                  flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold
-                  border border-slate-700/60
-                  ${cfg.badgeBg} ${cfg.badgeText}
-                `}
-              >
+              <span className={`
+                flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                text-[10px] font-semibold tracking-wide
+                border border-white/[0.06]
+                ${cfg.badgeBg} ${cfg.badgeText}
+              `}>
                 {cfg.icon}
                 {cfg.label}
               </span>
@@ -238,25 +144,35 @@ export default function SiloCard({ silo }: { silo: Silo }) {
 
             {/* Silo name */}
             <div>
-              <h2
-                className="font-space-grotesk text-lg font-bold text-slate-100 tracking-tight leading-snug line-clamp-1"
-              >
+              <h2 className="font-outfit font-bold text-lg text-white tracking-tight leading-snug line-clamp-1">
                 {silo.name}
               </h2>
-
-              {/* Location */}
               <div className="flex items-center gap-1.5 mt-1.5">
-                <MapPin size={12} className="text-slate-600 shrink-0" />
-                <span className="text-slate-500 text-xs truncate">{silo.location}</span>
+                <MapPin size={11} className="text-slate-600 shrink-0" />
+                <span className="font-plus-jakarta text-slate-500 text-xs truncate">{silo.location}</span>
               </div>
             </div>
 
-            {/* Footer divider + ID */}
-            <div className="mt-auto pt-3 border-t border-slate-800/80 flex items-center justify-between">
-              <span className="font-space-grotesk text-[10px] text-slate-600 tracking-widest uppercase">
-                ID #{silo.id}
+            {/* Crop type label */}
+            {silo.crop_type && (
+              <span className="
+                self-start px-2.5 py-1 rounded-lg text-[10px] font-medium
+                bg-white/[0.04] border border-white/[0.06]
+                text-slate-500 capitalize tracking-wide
+              ">
+                {silo.crop_type}
               </span>
-              <ShieldAlert size={13} className="text-slate-700" />
+            )}
+
+            {/* Footer */}
+            <div className="
+              mt-auto pt-3 border-t border-white/[0.05]
+              flex items-center justify-between
+            ">
+              <span className="font-outfit text-[9px] text-slate-700 tracking-[0.15em] uppercase">
+                #{silo.id.toUpperCase()}
+              </span>
+              <ShieldAlert size={12} className="text-slate-800" />
             </div>
           </motion.div>
         </div>

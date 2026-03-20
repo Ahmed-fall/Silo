@@ -5,252 +5,205 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/api";
 import SiloCard, { type Silo } from "@/components/SiloCard";
-import {
-  RefreshCw,
-  ServerCrash,
-  Wheat,
-  LayoutGrid,
-} from "lucide-react";
+import { RefreshCw, ServerCrash, Wheat, LayoutGrid } from "lucide-react";
 
-// ─── Mock data (used when the backend is unavailable) ────────────────────────
+// ─── Mock data ────────────────────────────────────────────────────────────────
 
 const MOCK_SILOS: Silo[] = [
-  { id: "s-001", name: "Alpha Depot",     location: "Cairo Governorate, EG",    risk_level: "none"   },
-  { id: "s-002", name: "Beta Reserve",    location: "Giza Plateau, EG",         risk_level: "low"    },
-  { id: "s-003", name: "Gamma Storage",   location: "Alexandria Coast, EG",     risk_level: "medium" },
-  { id: "s-004", name: "Delta Vault",     location: "Luxor Upper Egypt",        risk_level: "high"   },
-  { id: "s-005", name: "Epsilon Hub",     location: "Port Said, EG",            risk_level: "low"    },
-  { id: "s-006", name: "Zeta Station",    location: "Aswan, EG",                risk_level: "none"   },
-  { id: "s-007", name: "Eta Compound",    location: "Mansoura, EG",             risk_level: "medium" },
-  { id: "s-008", name: "Theta Terminal",  location: "Ismailia, EG",             risk_level: "high"   },
+  { id: "s-001", name: "Alpha Depot",     location: "Cairo Governorate, EG",  risk_level: "none",   crop_type: "wheat"   },
+  { id: "s-002", name: "Beta Reserve",    location: "Giza Plateau, EG",       risk_level: "low",    crop_type: "rice"    },
+  { id: "s-003", name: "Gamma Storage",   location: "Alexandria Coast, EG",   risk_level: "medium", crop_type: "corn"    },
+  { id: "s-004", name: "Delta Vault",     location: "Luxor Upper Egypt",      risk_level: "high",   crop_type: "barley"  },
+  { id: "s-005", name: "Epsilon Hub",     location: "Port Said, EG",          risk_level: "low",    crop_type: "sorghum" },
+  { id: "s-006", name: "Zeta Station",    location: "Aswan, EG",              risk_level: "none",   crop_type: "soybean" },
+  { id: "s-007", name: "Eta Compound",    location: "Mansoura, EG",           risk_level: "medium", crop_type: "wheat"   },
+  { id: "s-008", name: "Theta Terminal",  location: "Ismailia, EG",           risk_level: "high",   crop_type: "corn"    },
 ];
 
 // ─── Skeleton card ────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl p-[2px] bg-slate-800/60 animate-pulse h-[188px]">
-      <div className="h-full rounded-[14px] bg-slate-900 p-5 flex flex-col gap-4">
+    <div className="rounded-[22px] p-[1.5px] bg-slate-800/50 animate-pulse h-[210px]">
+      <div className="h-full rounded-[21px] bg-slate-900/80 p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between">
-          <div className="size-10 rounded-xl bg-slate-800" />
+          <div className="size-11 rounded-2xl bg-slate-800" />
           <div className="h-6 w-24 rounded-full bg-slate-800" />
         </div>
         <div className="space-y-2">
-          <div className="h-5 w-3/4 rounded-md bg-slate-800" />
-          <div className="h-3 w-1/2 rounded-md bg-slate-800" />
+          <div className="h-5 w-3/4 rounded-lg bg-slate-800" />
+          <div className="h-3 w-1/2 rounded-lg bg-slate-800" />
         </div>
-        <div className="mt-auto pt-3 border-t border-slate-800 flex items-center justify-between">
-          <div className="h-3 w-16 rounded bg-slate-800" />
-          <div className="h-3 w-3 rounded bg-slate-800" />
+        <div className="h-5 w-16 rounded-lg bg-slate-800" />
+        <div className="mt-auto pt-3 border-t border-slate-800 flex justify-between">
+          <div className="h-2.5 w-12 rounded bg-slate-800" />
+          <div className="h-2.5 w-2.5 rounded bg-slate-800" />
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Container animation ──────────────────────────────────────────────────────
+// ─── Animation variants ────────────────────────────────────────────────────────
 
-const containerVariants = {
+const gridVariants = {
   hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.07,
-    },
-  },
+  visible: { transition: { staggerChildren: 0.065 } },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.97 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 280, damping: 26 } },
+const cardVariants = {
+  hidden:  { opacity: 0, y: 28, scale: 0.96 },
+  visible: { opacity: 1, y: 0,  scale: 1, transition: { type: "spring", stiffness: 260, damping: 24 } },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SilosDashboard() {
-  const [silos, setSilos] = useState<Silo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [usingMock, setUsingMock] = useState(false);
+  const [silos,    setSilos]    = useState<Silo[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
+  const [usingMock,setUsingMock]= useState(false);
 
   async function fetchSilos() {
-    setLoading(true);
-    setError(null);
-    setUsingMock(false);
-
+    setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
-        timeout: 6_000,
-      });
+      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 6_000 });
       setSilos(data);
     } catch {
-      // Backend not available — silently fall back to mock data
-      setSilos(MOCK_SILOS);
-      setUsingMock(true);
+      setSilos(MOCK_SILOS); setUsingMock(true);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    fetchSilos();
-  }, []);
-
-  // ── Derived stats ──────────────────────────────────────────────────────────
+  useEffect(() => { fetchSilos(); }, []);
 
   const total   = silos.length;
   const atRisk  = silos.filter((s) => s.risk_level === "high" || s.risk_level === "medium").length;
-  const nominal = silos.filter((s) => s.risk_level === "none" || s.risk_level === "low").length;
+  const nominal = silos.filter((s) => s.risk_level === "none"  || s.risk_level === "low").length;
 
   return (
-    <div className="min-h-full flex flex-col gap-6">
+    <div className="min-h-full flex flex-col gap-8">
 
-      {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      {/* ── Page header ──────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <LayoutGrid size={16} className="text-slate-500" />
-            <span className="text-slate-500 text-xs tracking-widest uppercase">
+          <div className="flex items-center gap-2 mb-2">
+            <LayoutGrid size={13} className="text-slate-600" />
+            <span className="font-plus-jakarta text-slate-600 text-[10px] tracking-[0.2em] uppercase">
               Command Centre
             </span>
           </div>
-          <h1 className="font-space-grotesk text-3xl font-bold text-white tracking-tight">
+          <h1 className="font-outfit font-extrabold text-[2rem] text-white tracking-tight leading-none">
             Silos Dashboard
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Real-time status for all monitored grain facilities.
+          <p className="font-plus-jakarta text-slate-500 text-sm mt-2">
+            Real-time status across all monitored grain facilities.
           </p>
         </div>
 
-        {/* Refresh button */}
         <button
           onClick={fetchSilos}
           disabled={loading}
           className="
-            flex items-center gap-2 self-start sm:self-auto
-            px-4 py-2 rounded-xl text-sm font-medium
-            bg-slate-800 border border-slate-700 text-slate-300
-            hover:bg-slate-700 hover:text-white
+            self-start sm:self-auto
+            flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
+            bg-white/[0.04] border border-white/[0.07] text-slate-400
+            hover:bg-white/[0.08] hover:text-white hover:border-white/[0.12]
             disabled:opacity-40 disabled:cursor-not-allowed
-            transition-all duration-200 active:scale-95
+            shadow-float transition-all duration-200 active:scale-95
           "
-          aria-label="Refresh silo list"
         >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           Refresh
         </button>
       </div>
 
-      {/* ── Stats bar ────────────────────────────────────────────────────── */}
-      {!loading && !error && (
+      {/* ── Stats row ────────────────────────────────────────────────── */}
+      {!loading && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
           className="grid grid-cols-3 gap-3"
         >
           {[
-            { label: "Total Silos",   value: total,   color: "text-slate-200" },
-            { label: "At Risk",        value: atRisk,  color: "text-rose-400"  },
-            { label: "Nominal",        value: nominal, color: "text-emerald-400" },
-          ].map(({ label, value, color }) => (
-            <div
-              key={label}
-              className="
-                flex flex-col items-center justify-center gap-0.5
-                rounded-xl bg-slate-900/60 border border-slate-800
-                backdrop-blur-sm py-3 px-4
-              "
-            >
-              <span className={`font-space-grotesk text-2xl font-bold ${color}`}>
-                {value}
-              </span>
-              <span className="text-slate-500 text-xs tracking-wide">{label}</span>
+            { label: "Total Silos", value: total,   accent: "text-slate-100" },
+            { label: "At Risk",     value: atRisk,  accent: "text-rose-400"  },
+            { label: "Nominal",     value: nominal, accent: "text-emerald-400" },
+          ].map(({ label, value, accent }) => (
+            <div key={label} className="
+              flex flex-col items-center justify-center gap-1 py-4 px-3
+              rounded-2xl bg-white/[0.025]
+              border border-white/[0.05]
+              shadow-float
+            ">
+              <span className={`font-outfit font-bold text-2xl ${accent}`}>{value}</span>
+              <span className="font-plus-jakarta text-slate-600 text-[10px] tracking-widest uppercase">{label}</span>
             </div>
           ))}
         </motion.div>
       )}
 
-      {/* ── Mock data notice ─────────────────────────────────────────────── */}
+      {/* ── Mock notice ───────────────────────────────────────────────── */}
       {usingMock && !loading && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="
-            flex items-center gap-2.5 px-4 py-2.5 rounded-xl
-            bg-amber-950/40 border border-amber-800/50
-            text-amber-300 text-sm
-          "
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-950/30 border border-amber-800/30 text-amber-400 text-xs"
         >
-          <Wheat size={15} className="shrink-0" />
-          Backend unavailable — showing demo data. Live data will load once the server is reachable.
+          <Wheat size={13} className="shrink-0" />
+          Backend unavailable — showing demo data.
         </motion.div>
       )}
 
-      {/* ── Loading skeleton grid ─────────────────────────────────────────── */}
+      {/* ── Skeleton grid ─────────────────────────────────────────────── */}
       {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       )}
 
-      {/* ── Hard error state ─────────────────────────────────────────────── */}
+      {/* ── Error state ───────────────────────────────────────────────── */}
       {error && !loading && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="
-            flex flex-col items-center justify-center gap-4
-            rounded-2xl border border-red-900/50 bg-red-950/30
-            py-20 text-center
-          "
+          initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-4 rounded-2xl border border-rose-900/40 bg-rose-950/20 py-20 text-center"
         >
-          <ServerCrash size={40} className="text-red-500" />
+          <ServerCrash size={36} className="text-rose-600" />
           <div>
-            <p className="text-red-300 font-semibold text-lg">Failed to load silos</p>
-            <p className="text-slate-500 text-sm mt-1">{error}</p>
+            <p className="font-outfit font-bold text-rose-300 text-lg">Failed to load</p>
+            <p className="font-plus-jakarta text-slate-500 text-sm mt-1">{error}</p>
           </div>
-          <button
-            onClick={fetchSilos}
-            className="
-              mt-2 flex items-center gap-2 px-5 py-2 rounded-xl
-              bg-red-900/40 border border-red-800 text-red-300 text-sm
-              hover:bg-red-800/40 transition-all
-            "
-          >
-            <RefreshCw size={14} /> Retry
+          <button onClick={fetchSilos} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-900/30 border border-rose-800/40 text-rose-300 text-sm hover:bg-rose-900/50 transition-all">
+            <RefreshCw size={13} /> Retry
           </button>
         </motion.div>
       )}
 
-      {/* ── Silo grid ────────────────────────────────────────────────────── */}
+      {/* ── Silo grid ─────────────────────────────────────────────────── */}
       {!loading && !error && silos.length > 0 && (
         <motion.div
-          variants={containerVariants}
+          variants={gridVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
         >
           {silos.map((silo) => (
-            <motion.div key={silo.id} variants={itemVariants} className="h-full">
+            <motion.div key={silo.id} variants={cardVariants} className="h-full">
               <SiloCard silo={silo} />
             </motion.div>
           ))}
         </motion.div>
       )}
 
-      {/* ── Empty state ───────────────────────────────────────────────────── */}
+      {/* ── Empty state ───────────────────────────────────────────────── */}
       {!loading && !error && silos.length === 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="
-            flex flex-col items-center justify-center gap-3
-            rounded-2xl border border-slate-800 py-24 text-center
-          "
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-3 py-24 rounded-2xl border border-white/[0.04]"
         >
-          <Wheat size={40} className="text-slate-700" />
-          <p className="text-slate-500">No silos registered yet.</p>
+          <Wheat size={36} className="text-slate-800" />
+          <p className="font-plus-jakarta text-slate-600 text-sm">No silos registered yet.</p>
         </motion.div>
       )}
     </div>

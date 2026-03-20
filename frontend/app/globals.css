@@ -1,62 +1,69 @@
 @import "tailwindcss";
 
-/* ── Font definitions ─────────────────────────────────────────────────────── */
+/* ── Font CSS variables (set by Next.js next/font) ───────────────────────── */
 @theme inline {
-  --font-space-grotesk: var(--font-space-grotesk);
-  --font-inter: var(--font-inter);
+  --font-outfit:       var(--font-outfit);
+  --font-plus-jakarta: var(--font-plus-jakarta);
 }
 
-/* ── Base reset ───────────────────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* ── Base reset ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
-html {
-  color-scheme: dark;
-}
+html { color-scheme: dark; }
 
+/* ── Dark Mesh Gradient background ──────────────────────────────────────── */
 body {
-  background-color: #020617; /* slate-950 */
-  color: #e2e8f0;            /* slate-200 */
-  font-family: var(--font-inter, system-ui, sans-serif);
+  font-family: var(--font-plus-jakarta, system-ui, sans-serif);
+  color: #e2e8f0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  background-color: #020617;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 10%,  rgba(6,  78, 59, 0.22)  0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 20%,  rgba(30, 27, 75, 0.18)  0%, transparent 50%),
+    radial-gradient(ellipse 60% 70% at 50% 100%, rgba(15, 23, 42, 0.9)   0%, transparent 65%),
+    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(2,  6,  23, 0.4)   0%, transparent 100%);
 }
 
-/* ── Typography utilities ─────────────────────────────────────────────────── */
-.font-space-grotesk {
-  font-family: var(--font-space-grotesk, system-ui, sans-serif);
-}
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+.font-outfit       { font-family: var(--font-outfit,       system-ui, sans-serif); }
+.font-plus-jakarta { font-family: var(--font-plus-jakarta, system-ui, sans-serif); }
 
-/* ── Thin scrollbar (panel) ───────────────────────────────────────────────── */
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
-.scrollbar-track-transparent {
-  scrollbar-color: #1e293b transparent; /* slate-800 / transparent */
-}
-.scrollbar-thumb-slate-800::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
-}
-.scrollbar-thin::-webkit-scrollbar {
-  width: 5px;
-}
+/* ── Ultra-thin border utility ───────────────────────────────────────────── */
+.border-glow-emerald { border-color: rgba(52,211,153,0.25); }
+.border-glow-rose    { border-color: rgba(244,63,94,0.25); }
 
-/* ── Glassmorphism helper ─────────────────────────────────────────────────── */
+/* ── Glassmorphism card ──────────────────────────────────────────────────── */
 .glass {
-  background: rgba(15, 23, 42, 0.4); /* slate-900/40 */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 41, 59, 0.8); /* slate-800 */
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ── Glow utilities ───────────────────────────────────────────────────────── */
-.glow-emerald {
-  box-shadow: 0 0 24px rgba(52, 211, 153, 0.25);
+/* ── Floating shadow (spatial UI) ───────────────────────────────────────── */
+.shadow-float {
+  box-shadow:
+    0  4px  20px rgba(0, 0, 0, 0.50),
+    0 16px  60px rgba(0, 0, 0, 0.35),
+    0  0    1px  rgba(255,255,255,0.04) inset;
 }
-.glow-red {
-  box-shadow: 0 0 24px rgba(239, 68, 68, 0.35);
+.shadow-float-lg {
+  box-shadow:
+    0  8px  40px rgba(0, 0, 0, 0.65),
+    0 24px  80px rgba(0, 0, 0, 0.45),
+    0  0    1px  rgba(255,255,255,0.05) inset;
 }
+
+/* ── Thin scrollbar ──────────────────────────────────────────────────────── */
+.scrollbar-thin { scrollbar-width: thin; }
+.scrollbar-track-transparent,
+.scrollbar-thumb-slate-800 { scrollbar-color: #1e293b transparent; }
+.scrollbar-thin::-webkit-scrollbar      { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+
+/* ── Glow utilities ──────────────────────────────────────────────────────── */
+.glow-emerald { box-shadow: 0 0 28px rgba(52, 211,153, 0.30); }
+.glow-rose    { box-shadow: 0 0 28px rgba(244, 63, 94, 0.40); }
+.glow-amber   { box-shadow: 0 0 28px rgba(251,191, 36, 0.35); }
