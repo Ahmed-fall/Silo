@@ -1,6 +1,4 @@
 python-multipart==0.0.9
-ultralytics==8.2.0
-
 # Web Framework
 fastapi==0.115.0
 uvicorn==0.30.6

@@ -8,9 +8,13 @@ import os
 app = FastAPI(title="Silo AI Vision Service")
 
 # ── Model Loading ──────────────────────────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "final_model.keras")
-CLASS_NAMES = ["blast", "healthy", "mildew", "rust"]  # alphabetical - adjust if needed
-
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "weights", "final_model.keras")
+CLASS_NAMES = [
+    "Aphid", "Black Rust", "Blast", "Brown Rust",
+    "Fusarium Head Blight", "Healthy Wheat", "Leaf Blight",
+    "Mildew", "Mite", "Septoria", "Smut", "Stem fly",
+    "Tan spot", "Yellow Rust"
+]
 model = None
 
 def load_model():
