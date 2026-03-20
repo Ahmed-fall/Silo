@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from app.core.database import init_db, close_db
 from app.api import silos, sensors, images, alerts
+from app.ws.alerts import manager
 
 
 @asynccontextmanager
@@ -22,6 +23,19 @@ app.include_router(silos.router)
 app.include_router(sensors.router)
 app.include_router(images.router)
 app.include_router(alerts.router)
+
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
 
 
 @app.get("/health")
