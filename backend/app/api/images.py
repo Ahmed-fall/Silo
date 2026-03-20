@@ -5,7 +5,10 @@ from app.models.image import ImageResponse
 from typing import List
 import uuid
 import os
+import httpx
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/images", tags=["images"])
 
 
@@ -35,7 +38,41 @@ async def upload_image(silo_id: uuid.UUID, file: UploadFile = File(...)):
         silo_id,
         file_path,
     )
-    return dict(row)
+
+    detected_label = None
+    confidence = None
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.ai_vision_url}/analyze",
+                files={"file": (filename, contents, file.content_type)},
+                timeout=10.0,
+            )
+            result = response.json()
+
+            if result.get("status") == "ok":
+                detected_label = result.get("label")
+                confidence = result.get("confidence")
+
+                await db.execute(
+                    """
+                    UPDATE images
+                    SET detected_label = $1, confidence = $2
+                    WHERE id = $3
+                    """,
+                    detected_label,
+                    confidence,
+                    row["id"],
+                )
+
+    except Exception as e:
+        logger.warning(f"Vision service unavailable: {e}")
+
+    updated_row = await db.fetchrow(
+        "SELECT * FROM images WHERE id = $1", row["id"]
+    )
+    return dict(updated_row)
 
 
 @router.get("/{silo_id}", response_model=List[ImageResponse])
