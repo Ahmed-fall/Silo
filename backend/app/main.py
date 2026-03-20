@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.core.database import init_db, close_db
-from app.api import silos
+from app.api import silos, sensors, images, alerts
 
 
 @asynccontextmanager
@@ -19,6 +19,9 @@ app = FastAPI(
 )
 
 app.include_router(silos.router)
+app.include_router(sensors.router)
+app.include_router(images.router)
+app.include_router(alerts.router)
 
 
 @app.get("/health")
