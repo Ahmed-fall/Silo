@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* ── Font definitions ─────────────────────────────────────────────────────── */
+@theme inline {
+  --font-space-grotesk: var(--font-space-grotesk);
+  --font-inter: var(--font-inter);
+}
+
+/* ── Base reset ───────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #020617; /* slate-950 */
+  color: #e2e8f0;            /* slate-200 */
+  font-family: var(--font-inter, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography utilities ─────────────────────────────────────────────────── */
+.font-space-grotesk {
+  font-family: var(--font-space-grotesk, system-ui, sans-serif);
+}
+
+/* ── Thin scrollbar (panel) ───────────────────────────────────────────────── */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+.scrollbar-track-transparent {
+  scrollbar-color: #1e293b transparent; /* slate-800 / transparent */
+}
+.scrollbar-thumb-slate-800::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* ── Glassmorphism helper ─────────────────────────────────────────────────── */
+.glass {
+  background: rgba(15, 23, 42, 0.4); /* slate-900/40 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8); /* slate-800 */
+}
+
+/* ── Glow utilities ───────────────────────────────────────────────────────── */
+.glow-emerald {
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.25);
+}
+.glow-red {
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.35);
+}
