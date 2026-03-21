@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { motion, useAnimationControls } from "framer-motion";
 import { API_BASE } from "@/lib/api";
@@ -50,13 +51,14 @@ function SkeletonCard() {
 const gridVars  = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const cardVars  = {
   hidden:  { opacity: 0, y: 24, scale: 0.96 },
-  visible: { opacity: 1, y: 0,  scale: 1, transition: { type: "spring", stiffness: 260, damping: 24 } },
+  visible: { opacity: 1, y: 0,  scale: 1, transition: { stiffness: 260, damping: 24 } },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SilosDashboard() {
   const { compactMode } = useSettings();
+  const router = useRouter();
 
   const [silos,     setSilos]     = useState<Silo[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -66,13 +68,22 @@ export default function SilosDashboard() {
   // Ref keeps the latest fetchSilos for the auto-refresh interval (if ever added)
   const spinControls = useAnimationControls();
   const isMounted = useRef(true);
-  useEffect(() => { return () => { isMounted.current = false; }; }, []);
+  useEffect(() => { 
+  isMounted.current = true;
+  return () => { isMounted.current = false; }; 
+}, []);
 
   const fetchSilos = useCallback(async () => {
     setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 2_000 });
-      if (isMounted.current) setSilos(data);
+      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 10_000 });
+      if (isMounted.current) setSilos(data.map((s: Silo) => ({
+  ...s,
+  risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
+  crop_type: s.crop_type ?? "Wheat",
+  temperature: s.temperature ?? undefined,
+  humidity: s.humidity ?? undefined,
+})));
     } catch {
       if (isMounted.current) { setSilos(MOCK_SILOS); setUsingMock(true); }
     } finally {
@@ -80,7 +91,12 @@ export default function SilosDashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchSilos(); }, [fetchSilos]);
+  useEffect(() => { 
+  fetchSilos();
+  const onFocus = () => fetchSilos();
+  window.addEventListener("focus", onFocus);
+  return () => window.removeEventListener("focus", onFocus);
+}, []);
 
   // ── Premium 360° refresh handler ──
   async function handleRefresh() {
@@ -122,7 +138,7 @@ export default function SilosDashboard() {
         {/* ── Premium Glassmorphic Refresh Button ── */}
         <motion.button
           onClick={handleRefresh}
-          disabled={loading}
+          disabled={false}
           whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(52,211,153,0.25)" }}
           whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 340, damping: 24 }}

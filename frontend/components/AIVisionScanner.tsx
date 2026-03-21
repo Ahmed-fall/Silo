@@ -45,12 +45,12 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
     setResult(null);
 
     const formData = new FormData();
-    formData.append("image", file);
-    formData.append("silo_id", siloId);
+    formData.append("file", file);
+    
 
     try {
       // 1. DYNAMIC API FIRST: Try hitting the real backend with a 3-second timeout
-      const res = await axios.post(`${API_BASE}/images/upload`, formData, {
+      const res = await axios.post(`${API_BASE}/images/upload?silo_id=${siloId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 3000, 
       });
@@ -61,7 +61,7 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
                       
       setResult({
         label: res.data.detected_label,
-        confidence: res.data.confidence,
+        confidence: res.data.confidence * 100,
         isIssue,
       });
 

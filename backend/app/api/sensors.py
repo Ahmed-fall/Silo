@@ -69,14 +69,19 @@ async def ingest_sensor(sensor: SensorCreate):
                 )
 
                 from app.ws.alerts import manager
+                severity_map = {"high": "critical", "medium": "warning", "low": "info"}
                 await manager.broadcast({
                     "silo_id": str(sensor.silo_id),
                     "silo_name": silo["name"],
                     "risk_level": result["risk_level"],
                     "risk_score": result["risk_score"],
+                    "severity": severity_map.get(result["risk_level"], "info"),
                     "message": message,
+                    "timestamp": str(row["recorded_at"]),
+                    "read": False,
+                    "id": str(row["id"]),
                     "triggered_at": str(row["recorded_at"]),
-                })
+})
 
     except Exception as e:
         logger.warning(f"Predictive service unavailable: {e}")
