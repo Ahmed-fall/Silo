@@ -23,9 +23,9 @@ env/
 
 # ML models and datasets - too large for git
 ai-vision/app/model/weights/
-ai-predictive/app/model/model.pkl
+
 *.pt
-*.pkl
+
 *.csv
 *.zip
 
