@@ -42,10 +42,6 @@ async def ingest_sensor(sensor: SensorCreate):
                     "humidity": sensor.humidity or 60.0,
                     "soil_moisture": sensor.soil_moisture or 20.0,
                     "ndvi": sensor.ndvi or 0.5,
-                    "pest_damage": 50.0,
-                    "crop_stress_indicator": 50.0,
-                    "soil_ph": 6.5,
-                    "organic_matter": 2.0,
                 },
                 timeout=5.0,
             )

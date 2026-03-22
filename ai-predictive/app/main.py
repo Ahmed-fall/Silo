@@ -10,10 +10,6 @@ class SensorInput(BaseModel):
     humidity: float
     soil_moisture: float
     ndvi: float
-    pest_damage: float
-    crop_stress_indicator: float
-    soil_ph: float
-    organic_matter: float
 
 
 @app.post("/predict")
@@ -24,10 +20,6 @@ async def predict(sensor: SensorInput):
             humidity=sensor.humidity,
             soil_moisture=sensor.soil_moisture,
             ndvi=sensor.ndvi,
-            pest_damage=sensor.pest_damage,
-            crop_stress_indicator=sensor.crop_stress_indicator,
-            soil_ph=sensor.soil_ph,
-            organic_matter=sensor.organic_matter,
         )
         return {
             "risk_score": result["risk_score"],

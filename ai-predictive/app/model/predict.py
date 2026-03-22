@@ -1,63 +1,37 @@
-def predict_risk(
-    temperature: float,
-    humidity: float,
-    soil_moisture: float,
-    ndvi: float,
-    pest_damage: float,
-    crop_stress_indicator: float,
-    soil_ph: float,
-    organic_matter: float,
-) -> dict:
+import joblib
+import numpy as np
+import os
 
-    score = 0
+# Load once at startup
+_dir = os.path.dirname(__file__)
+_model = joblib.load(os.path.join(_dir, "weights/crop_health_model_xgb.pkl"))
+_encoder = joblib.load(os.path.join(_dir, "weights/label_encoder.pkl"))
 
-    if temperature > 40:
-        score += 30
-    elif temperature > 35:
-        score += 20
-    elif temperature > 30:
-        score += 10
+# Map label → risk_level your API already uses
+_LABEL_TO_RISK = {
+    "Critical": "high",
+    "Healthy":  "low",
+    "Stressed": "medium"
+}
 
-    if humidity > 80:
-        score += 25
-    elif humidity > 70:
-        score += 15
-    elif humidity > 60:
-        score += 5
+# Map risk_level → score 0-100
+_RISK_TO_SCORE = {
+    "high":   75,
+    "medium": 45,
+    "low":    15
+}
 
-    if soil_moisture > 30:
-        score += 15
-    elif soil_moisture > 20:
-        score += 8
+def predict_risk(temperature, humidity, soil_moisture, ndvi):
+    features = np.array([[temperature, humidity, soil_moisture, ndvi]])
 
-    if ndvi < 0.2:
-        score += 15
-    elif ndvi < 0.4:
-        score += 8
+    prediction = _model.predict(features)[0]
+    label = _encoder.inverse_transform([prediction])[0]  # "Critical" / "Healthy" / "Stressed"
 
-    if pest_damage > 70:
-        score += 10
-    elif pest_damage > 40:
-        score += 5
+    risk_level = _LABEL_TO_RISK[label]
+    risk_score = _RISK_TO_SCORE[risk_level]
 
-    if crop_stress_indicator > 70:
-        score += 10
-    elif crop_stress_indicator > 40:
-        score += 5
-
-    if soil_ph < 5.5 or soil_ph > 7.5:
-        score += 5
-
-    if organic_matter < 0.5:
-        score += 5
-
-    score = min(score, 100)
-
-    if score >= 60:
-        risk_level = "high"
-    elif score >= 30:
-        risk_level = "medium"
-    else:
-        risk_level = "low"
-
-    return {"risk_score": float(score), "risk_level": risk_level}
+    return {
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "status": "ok"
+    }
