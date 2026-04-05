@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, MessageSquare, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+
 type Message = {
   role: 'user' | 'assistant';
   content: string;
@@ -41,10 +42,10 @@ export default function ChatBot() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8002/chat', {
+      const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: messages }),
+        body: JSON.stringify({ message: text, model: "llama3.2" }),
       });
 
       if (!response.ok) throw new Error('API Error');
