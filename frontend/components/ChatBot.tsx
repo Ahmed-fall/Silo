@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, MessageSquare, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import ReactMarkdown from 'react-markdown';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -45,7 +45,7 @@ export default function ChatBot() {
       const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, model: "llama3.2" }),
+        body: JSON.stringify({ message: text, model: "llama3.2", history: messages }),
       });
 
       if (!response.ok) throw new Error('API Error');
@@ -107,7 +107,11 @@ export default function ChatBot() {
                       : 'bg-slate-800 text-slate-200 rounded-bl-sm border border-slate-700'
                     }
                   `}>
-                    {msg.content}
+                    <div className="space-y-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>strong]:font-bold">
+                      <ReactMarkdown>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </motion.div>
               ))}

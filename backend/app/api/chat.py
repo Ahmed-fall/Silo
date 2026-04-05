@@ -1,37 +1,103 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import List, Dict, Any
 import httpx
 import os
+from app.core.database import get_db
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-# Read the OLLAMA_URL from the environment variables
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434")
 
 class ChatRequest(BaseModel):
     message: str
-    model: str = "llama3.2"  # Using the model you just downloaded!
+    model: str = "llama3.2"
+    history: List[Dict[str, Any]] = []  # We now accept history!
 
 @router.post("/")
 async def chat_with_assistant(request: ChatRequest):
     try:
-        # Call the local Ollama instance
+        db = await get_db()
+        rows = await db.fetch(
+            """
+            SELECT s.name, s.location, sr.temperature, sr.humidity, a.risk_level
+            FROM silos s
+            LEFT JOIN LATERAL (
+                SELECT temperature, humidity FROM sensor_readings WHERE silo_id = s.id ORDER BY recorded_at DESC LIMIT 1
+            ) sr ON true
+            LEFT JOIN LATERAL (
+                SELECT risk_level FROM alerts WHERE silo_id = s.id ORDER BY triggered_at DESC LIMIT 1
+            ) a ON true
+            """
+        )
+        
+        silo_context = "--- LIVE SILO DATABASE ---\n"
+        if not rows:
+            silo_context += "The user currently has NO SILOS in the database.\n"
+        else:
+            for row in rows:
+                name = row.get("name", "Unknown Silo")
+                loc = row.get("location", "Unknown Location")
+                temp = row.get("temperature")
+                hum = row.get("humidity")
+                risk = row.get("risk_level")
+                
+                temp_str = f"{temp}°C" if temp else "N/A"
+                hum_str = f"{hum}%" if hum else "N/A"
+                risk_str = risk.upper() if risk else "None"
+                
+                silo_context += f"Silo Name: {name} | Location: {loc} | Temp: {temp_str} | Humidity: {hum_str} | Risk: {risk_str}\n"
+
+        # 1. Create the System Instructions
+        system_message = {
+            "role": "system",
+            "content": f"""You are the Silo Assistant, an expert AI agronomist built specifically to prevent crop spoilage in Egypt.
+You MUST provide detailed agricultural advice and NEVER refuse a farming question.
+
+Here is the LIVE SILO DATABASE for the user:
+{silo_context}
+
+CRITICAL KNOWLEDGE BASE (USE THIS TO ANSWER QUESTIONS):
+- WHEAT & CORN TEMPERATURES: Safe storage is below 15°C. Warning zone is 20°C - 25°C (insects start breeding). CRITICAL DANGER is 30°C - 40°C (rapid insect growth, weevils, fungi, and grain sweating).
+- MOISTURE & HUMIDITY: Safe is 12-13%. Critical Danger is above 14.5% (triggers Aspergillus mold and deadly Aflatoxins).
+- EGYPTIAN CLIMATE: The Nile Delta (Kafr El-Sheikh, Alexandria) has high humidity causing mold. Upper Egypt (Aswan, Luxor) is extremely hot and dry causing grain weight loss.
+- ACTIONABLE ADVICE: If temperatures or humidity are high, advise the user to immediately turn on aeration fans, check for "hot spots", or fumigate for insects.
+
+STRICT RULES:
+1. If the user asks if a temperature is safe (e.g., 37°C), you MUST use the Knowledge Base above to explain why it is dangerous and tell them what to do.
+2. Answer confidently as an expert. NEVER say "I don't have information" or "I cannot provide guidance." You literally have the guidance right here.
+3. Use Markdown (bolding and bullet points) to make your warnings easy to read.
+"""
+        }
+        # 2. Build the full conversation history
+        messages = [system_message]
+        
+        # Add all previous messages from the frontend
+        for msg in request.history:
+            if msg.get("role") in ["user", "assistant"]:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+                
+        # Add the brand new user message
+        messages.append({"role": "user", "content": request.message})
+
+        # 3. Call Ollama using the /api/chat endpoint
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{OLLAMA_URL}/api/generate",
+                f"{OLLAMA_URL}/api/chat",
                 json={
                     "model": request.model,
-                    "prompt": f"You are a helpful agricultural AI assistant for the Silo app. Answer this briefly and clearly: {request.message}",
+                    "messages": messages,  # Pass the entire conversation!
                     "stream": False
                 },
-                timeout=60.0  # Give the LLM a minute to think
+                timeout=60.0
             )
             
             if response.status_code != 200:
                 raise HTTPException(status_code=500, detail="Failed to communicate with Ollama")
                 
             data = response.json()
-            return {"reply": data.get("response", "No response generated.")}
+            return {"reply": data.get("message", {}).get("content", "No response generated.")}
             
     except Exception as e:
+        print(f"Chat error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ollama connection error: {str(e)}")
