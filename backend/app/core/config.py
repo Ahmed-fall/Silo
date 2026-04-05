@@ -1,4 +1,5 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
@@ -14,11 +15,12 @@ class Settings(BaseSettings):
     ai_predictive_url: str
 
     # Storage
-    uploads_dir: str = "/app/uploads"
+    uploads_dir: str = "./uploads"
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"),
+        extra="ignore"
+    )
 
     @property
     def database_url(self) -> str:

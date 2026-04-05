@@ -71,8 +71,11 @@ const RISK = {
 
 // ─── 3D Glossy Risk Badge ─────────────────────────────────────────────────────
 
-function RiskBadge({ risk }: { risk: RiskLevel }) {
-  const c = RISK[risk];
+function RiskBadge({ risk }: { risk: RiskLevel | string }) {
+  // Bulletproof fallback: sanitize and check if valid key
+  const sanitizedRisk = (risk?.toLowerCase() || "none") as RiskLevel;
+  const c = RISK[sanitizedRisk] || RISK.none;
+
   const baseBox = `${c.glow}, ${c.glossy}`;
   const peakBox = `${c.glowPk}, ${c.glossy}`;
 
@@ -111,7 +114,7 @@ function SensorWidget({
   glow: string;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/4 border border-white/6 shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
       <span className="text-slate-600 shrink-0">{icon}</span>
       <div>
         <p className={`font-outfit font-bold text-base leading-none bg-clip-text text-transparent ${gradient}`}
@@ -127,7 +130,9 @@ function SensorWidget({
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 export default function SiloCard({ silo }: { silo: Silo }) {
-  const c = RISK[silo.risk_level];
+  // Bulletproof fallback: sanitize and check if valid key
+  const riskKey = (silo.risk_level?.toLowerCase() || "none") as RiskLevel;
+  const c = RISK[riskKey] || RISK.none;
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const spinAngle  = useMotionValue(0);
@@ -174,10 +179,10 @@ export default function SiloCard({ silo }: { silo: Silo }) {
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center justify-center size-11 rounded-2xl shrink-0 bg-white/[0.04] border border-white/[0.06] shadow-[0_2px_12px_rgba(0,0,0,0.5)] text-slate-400 group-hover:text-slate-200 transition-colors">
+              <div className="flex items-center justify-center size-11 rounded-2xl shrink-0 bg-white/4 border border-white/6 shadow-[0_2px_12px_rgba(0,0,0,0.5)] text-slate-400 group-hover:text-slate-200 transition-colors">
                 <CropIcon crop={silo.crop_type ?? "wheat"} size={24} className="text-current" />
               </div>
-              <RiskBadge risk={silo.risk_level} />
+              <RiskBadge risk={riskKey} />
             </div>
 
             {/* Name + location */}
@@ -215,13 +220,13 @@ export default function SiloCard({ silo }: { silo: Silo }) {
 
             {/* Crop chip */}
             {silo.crop_type && (
-              <span className="self-start px-2.5 py-1 rounded-lg text-[10px] font-medium bg-white/[0.03] border border-white/[0.05] text-slate-500 capitalize tracking-wide">
+              <span className="self-start px-2.5 py-1 rounded-lg text-[10px] font-medium bg-white/3 border border-white/5 text-slate-500 capitalize tracking-wide">
                 {silo.crop_type}
               </span>
             )}
 
             {/* Footer */}
-            <div className="mt-auto pt-3 border-t border-white/[0.05] flex items-center justify-between">
+            <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
               <span className="font-outfit text-[9px] text-slate-700 tracking-[0.15em] uppercase">#{silo.id.toUpperCase()}</span>
               <ShieldAlert size={12} className="text-slate-800" />
             </div>
