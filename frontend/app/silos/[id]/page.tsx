@@ -25,9 +25,11 @@ interface SiloDetail {
 }
 
 interface SiloAlert {
-  id: string; message: string;
-  severity: "critical" | "warning" | "info";
-  timestamp: string; read: boolean;
+  id: string;
+  message: string;
+  risk_level: string;
+  triggered_at: string;
+  is_read: boolean;
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -51,10 +53,10 @@ const MOCK_SILO: SiloDetail = {
 };
 
 const MOCK_ALERTS: SiloAlert[] = [
-  { id: "a1", message: "Temperature exceeded 28 °C threshold", severity: "warning", timestamp: new Date(Date.now() - 600_000).toISOString(), read: false },
-  { id: "a2", message: "Humidity spike detected — 78 %", severity: "critical", timestamp: new Date(Date.now() - 1_800_000).toISOString(), read: false },
-  { id: "a3", message: "Scheduled ventilation cycle complete", severity: "info", timestamp: new Date(Date.now() - 3_600_000).toISOString(), read: true },
-  { id: "a4", message: "Sensor calibration recommended", severity: "info", timestamp: new Date(Date.now() - 7_200_000).toISOString(), read: true },
+  { id: "a1", message: "Temperature exceeded 28 °C threshold", risk_level: "medium", triggered_at: new Date(Date.now() - 600_000).toISOString(), is_read: false },
+  { id: "a2", message: "Humidity spike detected — 78 %", risk_level: "high", triggered_at: new Date(Date.now() - 1_800_000).toISOString(), is_read: false },
+  { id: "a3", message: "Scheduled ventilation cycle complete", risk_level: "low", triggered_at: new Date(Date.now() - 3_600_000).toISOString(), is_read: true },
+  { id: "a4", message: "Sensor calibration recommended", risk_level: "low", triggered_at: new Date(Date.now() - 7_200_000).toISOString(), is_read: true },
 ];
 
 // ─── Risk config ──────────────────────────────────────────────────────────────
@@ -87,7 +89,7 @@ function SensorWidget({ icon, label, value, unit, gradient, glow }: {
   value: number; unit: string; gradient: string; glow: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 px-4 py-3.5 rounded-2xl bg-slate-900/60 border border-white/[0.07]">
+    <div className="flex flex-col gap-1.5 px-4 py-3.5 rounded-2xl bg-slate-900/60 border border-white/7">
       <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-plus-jakarta uppercase tracking-widest">
         {icon}{label}
       </div>
@@ -104,18 +106,33 @@ function SensorWidget({ icon, label, value, unit, gradient, glow }: {
 // ─── Alert row ────────────────────────────────────────────────────────────────
 
 function AlertRow({ alert }: { alert: SiloAlert }) {
-  const s = SEV[alert.severity];
-  const time = new Date(alert.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // Map backend risk_level to frontend severity configuration
+  const severityMap: Record<string, keyof typeof SEV> = {
+    low: "info",
+    medium: "warning",
+    high: "critical",
+  };
+
+  const sevKey = (severityMap[alert.risk_level?.toLowerCase()] || "info") as keyof typeof SEV;
+  const s = SEV[sevKey] || SEV.info;
+
+  // Safe date parsing using backend's triggered_at
+  const dateObj = new Date(alert.triggered_at);
+  const isValidDate = !isNaN(dateObj.getTime());
+  const time = isValidDate 
+    ? dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "N/A";
+
   return (
     <motion.li layout
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 20 }}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
-      className={`relative flex items-start gap-2.5 px-4 py-3 rounded-xl border ${s.border} bg-slate-950/60 ${alert.read ? "opacity-50" : ""}`}
+      className={`relative flex items-start gap-2.5 px-4 py-3 rounded-xl border ${s.border} bg-slate-950/60 ${alert.is_read ? "opacity-50" : ""}`}
     >
-      {!alert.read && <span className={`absolute top-3 right-3 size-1.5 rounded-full ${s.dot} animate-pulse`} />}
+      {!alert.is_read && <span className={`absolute top-3 right-3 size-1.5 rounded-full ${s.dot} animate-pulse`} />}
       <span className={`${s.text} shrink-0 mt-0.5`}>{s.icon}</span>
       <div className="flex-1 min-w-0 pr-4">
-        <p className={`text-xs leading-snug ${alert.read ? "text-slate-500" : s.text}`}>{alert.message}</p>
+        <p className={`text-xs leading-snug ${alert.is_read ? "text-slate-500" : s.text}`}>{alert.message}</p>
         <div className="flex items-center gap-1 mt-1">
           <Clock size={9} className="text-slate-600" />
           <p className="text-[10px] text-slate-600 font-mono">{time}</p>
@@ -163,7 +180,8 @@ setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
     setIsRefreshing(false);
   }
 
-  const risk = RISK[silo?.risk_level ?? "none"];
+  const riskKey = (silo?.risk_level?.toLowerCase() || "none") as RiskLevel;
+  const risk = RISK[riskKey] || RISK.none;
 
   return (
     <div className="min-h-full flex flex-col gap-5 max-w-6xl mx-auto">
@@ -193,7 +211,7 @@ setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
           whileHover={{ scale: 1.06, boxShadow: "0 0 18px rgba(52,211,153,0.22)" }}
           whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 340, damping: 24 }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-white/[0.08] text-slate-300 font-outfit font-medium text-sm hover:text-white hover:border-white/[0.15] transition-colors backdrop-blur-md"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-white/8 text-slate-300 font-outfit font-medium text-sm hover:text-white hover:border-white/15 transition-colors backdrop-blur-md"
         >
           <motion.span
             animate={{ rotate: isRefreshing ? 360 : 0 }}
@@ -214,7 +232,7 @@ setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
 
           {/* Silo identity + risk */}
           <div className="col-span-2 sm:col-span-2 flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-slate-900/60 border border-white/[0.07]">
-            <div className="flex items-center justify-center size-11 rounded-2xl bg-slate-800 border border-white/[0.07] text-slate-300 shrink-0">
+            <div className="flex items-center justify-center size-11 rounded-2xl bg-slate-800 border border-white/7 text-slate-300 shrink-0">
               <CropIcon crop={silo?.crop_type ?? "wheat"} size={24} className="text-current" />
             </div>
             <div className="flex-1 min-w-0">
@@ -257,7 +275,7 @@ setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
         <p className="font-outfit font-semibold text-[10px] tracking-[0.2em] text-slate-600 uppercase mb-2">
           Sensor History — 24 h
         </p>
-        <div className="rounded-2xl bg-slate-900/60 border border-white/[0.06] p-4">
+        <div className="rounded-2xl bg-slate-900/60 border border-white/6 p-4">
           <div className="h-56">
             {loading
               ? <Skeleton className="w-full h-full" />
@@ -284,16 +302,16 @@ setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
         <section className="flex flex-col">
           <div className="flex items-center justify-between mb-2">
             <p className="font-outfit font-semibold text-[10px] tracking-[0.2em] text-slate-600 uppercase">Recent Alerts</p>
-            {alerts.some((a) => !a.read) && (
+            {alerts.some((a) => !a.is_read) && (
               <span className="px-2 py-0.5 rounded-full bg-rose-600/80 text-white text-[9px] font-bold font-outfit">
-                {alerts.filter((a) => !a.read).length} new
+                {alerts.filter((a) => !a.is_read).length} new
               </span>
             )}
           </div>
 
           {loading
             ? <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
-            : <ul className="flex flex-col gap-2 overflow-y-auto max-h-[420px] scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-800">
+            : <ul className="flex flex-col gap-2 overflow-y-auto max-h-105 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-800">
               <AnimatePresence initial={false}>
                 {alerts.map((a) => <AlertRow key={a.id} alert={a} />)}
               </AnimatePresence>
@@ -301,7 +319,7 @@ setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
           }
 
           {/* Connection status footer */}
-          <div className="flex items-center gap-2 pt-3 mt-auto border-t border-white/[0.05]">
+          <div className="flex items-center gap-2 pt-3 mt-auto border-t border-white/5">
             <ShieldAlert size={11} className="text-slate-700" />
             <span className="font-plus-jakarta text-slate-600 text-[10px]">{alerts.length} alerts loaded</span>
           </div>
