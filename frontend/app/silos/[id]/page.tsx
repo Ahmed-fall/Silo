@@ -10,7 +10,7 @@ import SensorChart, { type SensorReading } from "@/components/SensorChart";
 import AIVisionScanner from "@/components/AIVisionScanner";
 import {
   Thermometer, Droplets, AlertTriangle, ShieldCheck, Flame,
-  RefreshCw, ArrowLeft, MapPin, ShieldAlert, Clock,
+  RefreshCw, ArrowLeft, MapPin, ShieldAlert, Clock, Download,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -22,6 +22,7 @@ interface SiloDetail {
   id: string; name: string; location: string;
   risk_level: RiskLevel; crop_type: string;
   temperature?: number; humidity?: number;
+  capacity_kg?: number; fill_pct?: number;
 }
 
 interface SiloAlert {
@@ -50,6 +51,7 @@ const MOCK_SILO: SiloDetail = {
   location: "Cairo Governorate, EG",
   risk_level: "medium", crop_type: "wheat",
   temperature: 28.4, humidity: 71.2,
+  capacity_kg: 500000, fill_pct: 68,
 };
 
 const MOCK_ALERTS: SiloAlert[] = [
@@ -103,6 +105,85 @@ function SensorWidget({ icon, label, value, unit, gradient, glow }: {
   );
 }
 
+// ─── Capacity Widget (Liquid Wave) ───────────────────────────────────────────
+
+function CapacityWidget({ pct }: { pct: number }) {
+  const clamped = Math.max(0, Math.min(100, pct));
+
+  // Color logic: <50 cyan, 50-80 amber, >80 rose
+  const theme =
+    clamped < 50
+      ? { wave: "#22d3ee", wave2: "#06b6d4", text: "text-cyan-300", glow: "rgba(34,211,238,0.55)", label: "text-cyan-400" }
+      : clamped <= 80
+      ? { wave: "#fbbf24", wave2: "#f97316", text: "text-amber-300", glow: "rgba(251,191,36,0.55)", label: "text-amber-400" }
+      : { wave: "#fb7185", wave2: "#f43f5e", text: "text-rose-300", glow: "rgba(244,63,94,0.55)", label: "text-rose-400" };
+
+  // SVG viewBox is 100×100. Fill top edge sits at y = 100 - pct.
+  const fillY = 100 - clamped;
+
+  // Wave path: two sine humps that span the 100-wide box.
+  // We animate between two phase-shifted versions of the wave.
+  const wavePath1 = `M0,${fillY + 4} C15,${fillY - 4} 35,${fillY + 8} 50,${fillY + 2} C65,${fillY - 4} 85,${fillY + 6} 100,${fillY + 2} L100,100 L0,100 Z`;
+  const wavePath2 = `M0,${fillY + 2} C15,${fillY + 8} 35,${fillY - 4} 50,${fillY + 4} C65,${fillY + 8} 85,${fillY - 2} 100,${fillY + 4} L100,100 L0,100 Z`;
+
+  return (
+    <div className="flex flex-col gap-1.5 px-4 py-3.5 rounded-2xl bg-slate-900/60 border border-white/7 items-center justify-center">
+      <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-plus-jakarta uppercase tracking-widest self-start">
+        Fill Level
+      </div>
+
+      {/* Circular liquid container */}
+      <div className="relative size-16 shrink-0">
+        {/* Outer ring glow */}
+        <svg viewBox="0 0 100 100" className="absolute inset-0 size-full" style={{ filter: `drop-shadow(0 0 6px ${theme.glow})` }}>
+          {/* Clipping mask — circle */}
+          <defs>
+            <clipPath id="circle-clip">
+              <circle cx="50" cy="50" r="47" />
+            </clipPath>
+          </defs>
+
+          {/* Background fill area */}
+          <circle cx="50" cy="50" r="47" fill="rgba(15,23,42,0.9)" />
+
+          {/* Animated wave fill */}
+          <g clipPath="url(#circle-clip)">
+            {/* Back wave (slightly transparent) */}
+            <motion.path
+              d={wavePath1}
+              fill={theme.wave2}
+              fillOpacity={0.4}
+              animate={{ d: [wavePath1, wavePath2, wavePath1] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            />
+            {/* Front wave */}
+            <motion.path
+              d={wavePath2}
+              fill={theme.wave}
+              fillOpacity={0.85}
+              animate={{ d: [wavePath2, wavePath1, wavePath2] }}
+              transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </g>
+
+          {/* Circle border ring */}
+          <circle cx="50" cy="50" r="47" fill="none" stroke={theme.wave} strokeWidth="1.5" strokeOpacity="0.5" />
+        </svg>
+
+        {/* Percentage label centered */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p
+            className={`font-outfit font-extrabold text-xl leading-none ${theme.text}`}
+            style={{ filter: `drop-shadow(0 0 6px ${theme.glow})`, textShadow: `0 0 10px ${theme.glow}` }}
+          >
+            {Math.round(clamped)}<span className="text-[10px] font-semibold">%</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Alert row ────────────────────────────────────────────────────────────────
 
 function AlertRow({ alert }: { alert: SiloAlert }) {
@@ -149,6 +230,7 @@ export default function SiloDetailPage() {
 
   const [silo, setSilo] = useState<SiloDetail | null>(null);
   const [sensors, setSensors] = useState<SensorReading[]>([]);
+  const [forecast, setForecast] = useState<SensorReading[]>([]);
   const [alerts, setAlerts] = useState<SiloAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -157,14 +239,18 @@ export default function SiloDetailPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const timeout = 2_000;
-    const [s, sens, al] = await Promise.allSettled([
+    const [s, sens, al, fc] = await Promise.allSettled([
       axios.get<SiloDetail>(`${API_BASE}/silos/${id}`, { timeout }),
       axios.get<SensorReading[]>(`${API_BASE}/sensors/${id}`, { timeout }),
       axios.get<SiloAlert[]>(`${API_BASE}/alerts/${id}`, { timeout }),
+      // AI Predictive Service — optional; falls back to [] if offline
+      axios.get<SensorReading[]>(`${API_BASE}/ai-predictive/forecast/${id}`, { timeout }),
     ]);
     setSilo(s.status === "fulfilled" ? s.value.data : { ...MOCK_SILO, id: id ?? MOCK_SILO.id });
     setSensors(sens.status === "fulfilled" ? sens.value.data : makeMockSensor(24));
     setAlerts(al.status === "fulfilled" ? al.value.data : MOCK_ALERTS);
+    // Forecast is non-critical — empty array = graceful no-forecast mode
+    setForecast(fc.status === "fulfilled" ? fc.value.data : []);
     setLoading(false);
   }, [id]);
 
@@ -174,6 +260,26 @@ export default function SiloDetailPage() {
     setIsRefreshing(true);
     await fetchAll();
     setIsRefreshing(false);
+  }
+
+  // ── PDF Report via native browser print ──────────────────────────────────
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  function handlePrint() {
+    setIsPrinting(true);
+    // Stamp today's date as a data attribute so CSS body::after can read it
+    const dateStr = new Date().toLocaleString([], {
+      year: "numeric", month: "long", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+    document.body.setAttribute("data-print-date", dateStr);
+
+    // Let React finish re-render (tiny delay), then print
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+      document.body.removeAttribute("data-print-date");
+    }, 120);
   }
 
   const riskKey = (silo?.risk_level?.toLowerCase() || "none") as RiskLevel;
@@ -203,28 +309,69 @@ export default function SiloDetailPage() {
             }
           </div>
         </div>
-        <motion.button onClick={handleRefresh}
-          whileHover={{ scale: 1.06, boxShadow: "0 0 18px rgba(52,211,153,0.22)" }}
-          whileTap={{ scale: 0.94 }}
-          transition={{ type: "spring", stiffness: 340, damping: 24 }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-white/8 text-slate-300 font-outfit font-medium text-sm hover:text-white hover:border-white/15 transition-colors backdrop-blur-md"
-        >
-          <motion.span
-            animate={{ rotate: isRefreshing ? 360 : 0 }}
-            transition={isRefreshing ? { repeat: Infinity, duration: 1, ease: "linear" } : { duration: 0.3 }}
-            className="inline-flex"
+        {/* ── Action buttons (hidden in print) ── */}
+        <div className="flex items-center gap-2" data-print-hide="true">
+          {/* Refresh */}
+          <motion.button onClick={handleRefresh}
+            whileHover={{ scale: 1.06, boxShadow: "0 0 18px rgba(52,211,153,0.22)" }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 340, damping: 24 }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-white/8 text-slate-300 font-outfit font-medium text-sm hover:text-white hover:border-white/15 transition-colors backdrop-blur-md"
           >
-            <RefreshCw size={13} />
-          </motion.span>            Refresh
-        </motion.button>
+            <motion.span
+              animate={{ rotate: isRefreshing ? 360 : 0 }}
+              transition={isRefreshing ? { repeat: Infinity, duration: 1, ease: "linear" } : { duration: 0.3 }}
+              className="inline-flex"
+            >
+              <RefreshCw size={13} />
+            </motion.span>
+            Refresh
+          </motion.button>
+
+          {/* Generate PDF Report */}
+          <motion.button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            whileHover={{
+              scale: 1.06,
+              boxShadow: "0 0 20px rgba(139,92,246,0.35), 0 0 40px rgba(139,92,246,0.15)",
+            }}
+            whileTap={{ scale: 0.93 }}
+            transition={{ type: "spring", stiffness: 380, damping: 22 }}
+            className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-outfit font-medium text-sm backdrop-blur-md overflow-hidden"
+            style={{
+              background: isPrinting
+                ? "rgba(139,92,246,0.25)"
+                : "linear-gradient(135deg, rgba(139,92,246,0.18) 0%, rgba(168,85,247,0.1) 100%)",
+              border: "1px solid rgba(139,92,246,0.35)",
+              color: isPrinting ? "#c084fc" : "#a78bfa",
+            }}
+          >
+            {/* Subtle shimmer overlay */}
+            <motion.span
+              className="absolute inset-0 rounded-xl"
+              animate={isPrinting ? { opacity: [0.1, 0.3, 0.1] } : { opacity: 0 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+              style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.2), transparent)" }}
+            />
+            <motion.span
+              animate={isPrinting ? { y: [0, -2, 0] } : { y: 0 }}
+              transition={isPrinting ? { duration: 0.8, repeat: Infinity, ease: "easeInOut" } : {}}
+              className="inline-flex relative z-10"
+            >
+              <Download size={13} />
+            </motion.span>
+            <span className="relative z-10">{isPrinting ? "Preparing…" : "PDF Report"}</span>
+          </motion.button>
+        </div>
       </div>
 
       {/* ── TOP ROW: Identity + Risk + Live Readings (horizontal) ── */}
       {loading
-        ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+        ? <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
-        : <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        : <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
 
           {/* Silo identity + risk */}
           <div className="col-span-2 sm:col-span-2 flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-slate-900/60 border border-white/[0.07]">
@@ -263,19 +410,22 @@ export default function SiloDetailPage() {
             gradient="bg-gradient-to-r from-cyan-400 to-blue-500"
             glow="rgba(34,211,238,0.55)"
           />
+
+          {/* Fill Level */}
+          <CapacityWidget pct={silo?.fill_pct ?? 0} />
         </div>
       }
 
       {/* ── MIDDLE ROW: Sensor History Chart (full width) ── */}
       <section>
         <p className="font-outfit font-semibold text-[10px] tracking-[0.2em] text-slate-600 uppercase mb-2">
-          Sensor History — 24 h
+          Sensor History &amp; AI Forecast
         </p>
         <div className="rounded-2xl bg-slate-900/60 border border-white/6 p-4">
           <div className="h-56">
             {loading
               ? <Skeleton className="w-full h-full" />
-              : <SensorChart data={sensors} />
+              : <SensorChart data={sensors} forecastData={forecast} />
             }
           </div>
         </div>

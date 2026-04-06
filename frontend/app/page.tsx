@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { motion, useAnimationControls } from "framer-motion";
 import { API_BASE } from "@/lib/api";
@@ -25,7 +25,7 @@ const MOCK_SILOS: Silo[] = [
 
 function SkeletonCard() {
   return (
-    <div className="rounded-[22px] p-[1.5px] bg-slate-800/50 animate-pulse h-[230px]">
+    <div className="rounded-[22px] p-[1.5px] bg-slate-800/50 animate-pulse h-57.5">
       <div className="h-full rounded-[21px] bg-slate-900/80 p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between">
           <div className="size-11 rounded-2xl bg-slate-800" />
@@ -48,9 +48,9 @@ function SkeletonCard() {
 // ─── Grid animation variants ──────────────────────────────────────────────────
 
 const gridVars  = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
-const cardVars  = {
+const cardVars = {
   hidden:  { opacity: 0, y: 24, scale: 0.96 },
-  visible: { opacity: 1, y: 0,  scale: 1, transition: { type: "spring", stiffness: 260, damping: 24 } },
+  visible: { opacity: 1, y: 0,  scale: 1, transition: { type: "spring" as const, stiffness: 260, damping: 24 } },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -65,22 +65,42 @@ export default function SilosDashboard() {
 
   // Ref keeps the latest fetchSilos for the auto-refresh interval (if ever added)
   const spinControls = useAnimationControls();
-  const isMounted = useRef(true);
-  useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
-  const fetchSilos = useCallback(async () => {
+  const fetchSilos = useCallback(async (signal?: AbortSignal) => {
+    // ── Strict state reset at fetch start ──────────────────────────────────
     setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 2_000 });
-      if (isMounted.current) setSilos(data);
-    } catch {
-      if (isMounted.current) { setSilos(MOCK_SILOS); setUsingMock(true); }
+      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
+        timeout: 2_000,
+        signal,           // links this request to the AbortController
+      });
+      setSilos(data);
+    } catch (err) {
+      // Aborted requests (user navigated away mid-flight) — do nothing.
+      // We must NOT set mock data or flip loading here; the effect cleanup
+      // will have already run, and the new mount will start a fresh fetch.
+      if (axios.isCancel(err)) return;
+
+      // Real failure (timeout, network error, 5xx) — fall back to mock data.
+      setSilos(MOCK_SILOS);
+      setUsingMock(true);
     } finally {
-      if (isMounted.current) setLoading(false);
+      // Guaranteed unblock — ONLY runs when the request was NOT aborted.
+      // (The early `return` in the catch above prevents this from firing
+      //  on cancellation, so the new mount's own finally handles cleanup.)
+      setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchSilos(); }, [fetchSilos]);
+  useEffect(() => {
+    // Each effect invocation gets its own AbortController — this is what
+    // makes remounts work correctly. On unmount, the cleanup cancels the
+    // in-flight request. On remount, a brand-new controller is created,
+    // so the new fetch runs completely independently.
+    const controller = new AbortController();
+    fetchSilos(controller.signal);
+    return () => controller.abort();
+  }, [fetchSilos]);
 
   // ── Premium 360° refresh handler ──
   async function handleRefresh() {
@@ -129,11 +149,11 @@ export default function SilosDashboard() {
           className="
             self-start sm:self-auto
             flex items-center gap-2.5 px-4 py-2.5 rounded-xl
-            bg-white/[0.05] border border-white/[0.09]
+            bg-white/5 border border-white/9
             text-slate-300 font-outfit font-medium text-sm
             backdrop-blur-md
             disabled:opacity-40 disabled:cursor-not-allowed
-            transition-colors hover:text-white hover:border-white/[0.15]
+            transition-colors hover:text-white hover:border-white/15
           "
           aria-label="Refresh silo data"
         >
@@ -156,7 +176,7 @@ export default function SilosDashboard() {
             { label: "At Risk",     value: atRisk,  accent: "text-rose-400"  },
             { label: "Nominal",     value: nominal, accent: "text-emerald-400" },
           ].map(({ label, value, accent }) => (
-            <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/[0.025] border border-white/[0.05]">
+            <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/2.5 border border-white/5">
               <span className={`font-outfit font-bold text-2xl ${accent}`}>{value}</span>
               <span className="font-plus-jakarta text-slate-600 text-[10px] tracking-widest uppercase">{label}</span>
             </div>
@@ -225,7 +245,7 @@ export default function SilosDashboard() {
       {/* ── Empty state ── */}
       {!loading && !error && silos.length === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-3 py-24 rounded-2xl border border-white/[0.04]"
+          className="flex flex-col items-center gap-3 py-24 rounded-2xl border border-white/4"
         >
           <Wheat size={36} className="text-slate-800" />
           <p className="font-plus-jakarta text-slate-600 text-sm">No silos registered yet.</p>

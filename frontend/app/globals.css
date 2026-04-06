@@ -67,3 +67,231 @@ body {
 .glow-emerald { box-shadow: 0 0 28px rgba(52, 211,153, 0.30); }
 .glow-rose    { box-shadow: 0 0 28px rgba(244, 63, 94, 0.40); }
 .glow-amber   { box-shadow: 0 0 28px rgba(251,191, 36, 0.35); }
+
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  @media print — PDF / Print Report styles                               ║
+   ║                                                                         ║
+   ║  Layout stack this must handle:                                         ║
+   ║    <body class="flex overflow-hidden">                                  ║
+   ║      <Sidebar />          ← flex sibling, must be hidden                ║
+   ║      <div class="flex-1"> ← content column                              ║
+   ║        <header />         ← top bar, must be hidden                     ║
+   ║        <main class="overflow-y-auto p-4 lg:p-6">                        ║
+   ║          <div class="min-h-full max-w-6xl mx-auto"> ← page container   ║
+   ║                                                                         ║
+   ║  Key fixes:                                                             ║
+   ║    1. Collapse flex layout → block                                      ║
+   ║    2. Hide Sidebar + header                                             ║
+   ║    3. Remove max-w + mx-auto constraints                                ║
+   ║    4. Remove overflow clip                                              ║
+   ║    5. Kill all animations                                               ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+@media print {
+
+  /* ── 1. A4 page setup ────────────────────────────────────────────────── */
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm 12mm 12mm;
+  }
+
+  /* ── 2. Root resets ──────────────────────────────────────────────────── */
+  html {
+    color-scheme: light;
+    height: auto !important;
+  }
+
+  body {
+    /* Collapse the flex shell that holds Sidebar + content column */
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+
+    /* White background */
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── 3. Branded header line (auto-injected, not part of the app DOM) ─── */
+  body::before {
+    content: "SILO  ·  Smart Grain Management & AI Diagnostics";
+    display: block;
+    font-family: var(--font-outfit, system-ui, sans-serif);
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #64748b;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
+  }
+
+  body::after {
+    content: "Report generated: " attr(data-print-date);
+    display: block;
+    font-family: var(--font-outfit, system-ui, sans-serif);
+    font-size: 8pt;
+    color: #94a3b8;
+    text-align: right;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 6pt;
+    margin-top: 12pt;
+  }
+
+  /* ── 4. Hide the sidebar, global header, and all interactive controls ── */
+  /*
+   * Target by their structural role rather than generated class names so
+   * the selectors survive Tailwind class purging and Next.js builds.
+   */
+  body > * > aside,                  /* <Sidebar /> — first child aside    */
+  body > * > div > aside,            /* nested aside fallback              */
+  body > * > div > header,           /* top bar with LiveAlertsPanel       */
+  [data-print-hide="true"],          /* explicit opt-out attribute         */
+  .no-print {
+    display: none !important;
+  }
+
+  /* ── 5. Content column: fill full paper width ────────────────────────── */
+  /*
+   * The content column is the <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+   * that wraps header + main. Make it full width and remove overflow clip.
+   */
+  body > * > div {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    flex: none !important;
+  }
+
+  /* ── 6. <main> — remove scroll, remove padding (page margins handle it) */
+  main {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* ── 7. Page content container — kill max-width and auto-margins ─────── */
+  /*
+   * Tailwind's max-w-6xl mx-auto is the primary cause of the
+   * "content shifted right with blank left space" bug.
+   */
+  main > * {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* ── 8. Kill all Framer Motion transforms / transitions ─────────────── */
+  * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  /* ── 9. Card / widget surface → white with light border ─────────────── */
+  [class*="bg-slate-9"],
+  [class*="bg-slate-8"],
+  [class*="bg-slate-95"],
+  .glass {
+    background: #f8fafc !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  /* ── 10. Text colour normalisation ──────────────────────────────────── */
+  h1, h2, h3, h4, h5, h6,
+  [class*="text-white"],
+  [class*="text-slate-1"],
+  [class*="text-slate-2"],
+  [class*="text-slate-3"] {
+    color: #0f172a !important;
+  }
+
+  [class*="text-slate-4"],
+  [class*="text-slate-5"],
+  [class*="text-slate-6"],
+  [class*="text-slate-7"] {
+    color: #475569 !important;
+  }
+
+  /* Preserve accent colours on badges and risk indicators */
+  [class*="text-emerald"],
+  [class*="text-rose"],
+  [class*="text-amber"],
+  [class*="text-cyan"],
+  [class*="text-fuchsia"],
+  [class*="text-violet"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── 11. Grids — collapse to 1-column for narrow A4 ─────────────────── */
+  /* 5-col widget row */
+  [class*="grid-cols-5"],
+  [class*="sm:grid-cols-5"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* 2-col bottom section (AI Scanner + Alerts) */
+  [class*="lg:grid-cols-2"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── 12. SVG / Recharts — dark ink on white ─────────────────────────── */
+  svg text {
+    fill: #475569 !important;
+  }
+
+  /* Grid lines */
+  .recharts-cartesian-grid line {
+    stroke: #e2e8f0 !important;
+  }
+
+  /* Preserve glow-colored chart strokes */
+  .recharts-line-curve {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── 13. Page-break controls ─────────────────────────────────────────── */
+  [data-print-section="break-before"] {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  [data-print-section="avoid-break"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ── 14. Overflow on scroll containers ──────────────────────────────── */
+  [class*="overflow-y-auto"],
+  [class*="overflow-hidden"] {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* ── 15. Links — suppress underlines ────────────────────────────────── */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}
+
