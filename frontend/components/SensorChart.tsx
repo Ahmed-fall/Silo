@@ -247,29 +247,27 @@ function CustomLegend() {
       {items.map(({ label, gradient, glow, dashed }) => (
         <div key={label} className="flex items-center gap-2">
           {dashed ? (
-            // Dashed swatch for forecast
-            <svg width="24" height="4" viewBox="0 0 24 4">
-              <line
-                x1="0" y1="2" x2="24" y2="2"
-                stroke="url(#leg-forecast)"
-                strokeWidth="2.5"
-                strokeDasharray="4 3"
-                style={{ filter: `drop-shadow(0 0 3px ${glow})` }}
-              />
-              <defs>
-                <linearGradient id="leg-forecast" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#e879f9" />
-                  <stop offset="100%" stopColor="#818cf8" />
-                </linearGradient>
-              </defs>
-            </svg>
+            // Dashed swatch for forecast (Tailwind styling)
+            <div
+              className="w-6 border-t-[2.5px] border-purple-400 border-dashed"
+              style={{ filter: `drop-shadow(0 0 3px ${glow})` }}
+            />
           ) : (
             <span
               className="inline-block h-[3px] w-6 rounded-full"
               style={{ background: gradient, boxShadow: `0 0 6px ${glow}` }}
             />
           )}
-          <span className="font-plus-jakarta text-slate-400 text-xs">{label}</span>
+          {dashed ? (
+            <span
+              className="font-plus-jakarta font-bold text-xs text-transparent bg-clip-text"
+              style={{ backgroundImage: gradient }}
+            >
+              {label}
+            </span>
+          ) : (
+            <span className="font-plus-jakarta text-slate-400 text-xs">{label}</span>
+          )}
         </div>
       ))}
     </div>

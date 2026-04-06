@@ -205,7 +205,7 @@ export default function LiveAlertsPanel() {
       </div>
 
       {/* ── Bell button in topbar ── */}
-      <div className="relative">
+      <div className="relative z-50">
         <button
           onClick={() => setPanelOpen((v) => !v)}
           className={`

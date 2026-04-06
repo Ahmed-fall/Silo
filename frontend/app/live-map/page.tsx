@@ -185,7 +185,7 @@ function PulseNode({ silo, isSelected, onClick }: {
   return (
     <motion.button
       onClick={onClick}
-      className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none group z-10"
+      className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none group z-10 hover:z-50"
       style={{ top: silo.top, left: silo.left }}
       whileHover={{ scale: 1.3 }} whileTap={{ scale: 0.88 }}
       transition={{ type: "spring", stiffness: 420, damping: 22 }}
@@ -215,7 +215,7 @@ function PulseNode({ silo, isSelected, onClick }: {
         transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
       />
       {/* Hover tooltip */}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 px-2.5 py-1 rounded-lg whitespace-nowrap font-outfit text-[10px] font-semibold bg-slate-900/95 border border-white/10 text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-xl">
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 px-2.5 py-1 rounded-lg whitespace-nowrap font-outfit text-[10px] font-semibold bg-slate-900/95 border border-white/10 text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-xl z-50">
         {silo.name}
       </span>
     </motion.button>
