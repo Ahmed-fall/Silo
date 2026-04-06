@@ -27,10 +27,10 @@ async def seed():
 
         # 1. Seed Silos (Showcasing all risk levels and crop types)
         silos_data = [
-            ("Texas Terminal", "Houston, TX", 500000.0, "high", "wheat"),
-            ("Northern Hub", "Chicago, IL", 750000.0, "medium", "corn"),
-            ("Central Valley", "Fresno, CA", 600000.0, "low", "soybeans"),
-            ("Coastal Depot", "Savannah, GA", 400000.0, "none", "barley"),
+            ("Alexandria Grain Terminal", "Alexandria", 500000.0, "high", "wheat"),
+            ("Cairo Central Hub", "Cairo", 750000.0, "medium", "corn"),
+            ("Upper Egypt Storage", "Luxor", 600000.0, "low", "sorghum"),
+            ("Red Sea Supply Depot", "Hurghada", 400000.0, "none", "barley"),
         ]
         
         silo_ids = []
@@ -63,9 +63,9 @@ async def seed():
         print("Seeding alerts...")
         # Map: (silo_index, risk_level, score, message, is_read)
         alerts_data = [
-            (0, "high", 88.5, "CRITICAL: Oxygen levels dropping in Texas Terminal!", False),
+            (0, "high", 88.5, "CRITICAL: Oxygen levels dropping in Alexandria Terminal!", False),
             (0, "medium", 62.1, "High temperature spike detected in main chamber.", True),
-            (1, "medium", 54.8, "Increased pest activity detected by AI vision.", False),
+            (1, "medium", 54.8, "Increased pest activity detected by AI vision in Cairo.", False),
             (2, "low", 22.4, "Scheduled maintenance required for sensor array B.", False),
             (3, "none", 5.0, "System self-test passed: All parameters nominal.", True),
             (1, "high", 91.2, "CRITICAL: Moisture levels exceeding safety threshold!", False),
@@ -78,7 +78,7 @@ async def seed():
             )
 
         # 4. Seed Images (History of detections)
-        print("Seeding AI Vision detection history...")
+        print("Seeding AI Vision detection history...")     
         detections = [
             (0, "Aphid Detected", 0.94),
             (1, "Moderate Mildew", 0.78),

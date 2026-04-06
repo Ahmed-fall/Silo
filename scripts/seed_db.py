@@ -27,9 +27,9 @@ async def seed():
 
         # 1. Seed Silos
         silos = [
-            ("Texas Terminal", "Houston, TX", 500000.0),
-            ("Northern Hub", "Chicago, IL", 750000.0),
-            ("Central Valley", "Fresno, CA", 600000.0),
+            ("Alexandria Grain Terminal", "Alexandria", 500000.0),
+            ("Cairo Central Hub", "Cairo", 750000.0),
+            ("Upper Egypt Storage", "Luxor", 600000.0),
         ]
         
         silo_ids = []
@@ -60,9 +60,9 @@ async def seed():
         # 3. Seed Alerts
         print("Seeding alerts...")
         alert_messages = [
-            ("low", 15.5, "Mild temperature fluctuation detected."),
-            ("medium", 45.2, "Humidity levels rising above threshold."),
-            ("high", 88.7, "CRITICAL: Potential pest detected in Northern Hub!"),
+            ("low", 15.5, "Mild temperature fluctuation detected in Luxor."),
+            ("medium", 45.2, "Humidity levels rising above threshold in Cairo."),
+            ("high", 88.7, "CRITICAL: Potential pest detected in Alexandria Terminal!"),
         ]
         
         for i, (level, score, msg) in enumerate(alert_messages):
