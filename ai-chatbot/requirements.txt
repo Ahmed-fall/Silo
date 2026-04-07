@@ -1,0 +1,10 @@
+# Web Framework
+fastapi
+uvicorn
+python-multipart
+
+# HTTP client (to call Ollama)
+requests
+
+# Data validation
+pydantic

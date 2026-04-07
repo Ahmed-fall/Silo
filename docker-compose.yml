@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,6 +29,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   ai-vision:
@@ -46,6 +48,16 @@ services:
     ports:
       - "8002:8002"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+  ai-chatbot:
+    build:
+      context: ./ai-chatbot
+    ports:
+      - "8003:8000"
+    environment:
+      - OLLAMA_URL=http://host.docker.internal:11434/api/chat
+      - MODEL_NAME=llama3.2
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
