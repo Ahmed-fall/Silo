@@ -1,24 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { motion, useAnimationControls } from "framer-motion";
 import { API_BASE } from "@/lib/api";
 import SiloCard, { type Silo } from "@/components/SiloCard";
 import { useSettings } from "@/context/SettingsContext";
 import { RefreshCw, ServerCrash, Wheat, LayoutGrid } from "lucide-react";
+import ChatBot from '@/components/ChatBot';
 
 // ─── Mock data — includes temperature + humidity for sensor widgets ───────────
 
 const MOCK_SILOS: Silo[] = [
-  { id:"s-001", name:"Alpha Depot",    location:"Cairo Governorate, EG",  risk_level:"none",   crop_type:"wheat",   temperature:22.4, humidity:51.2 },
-  { id:"s-002", name:"Beta Reserve",   location:"Giza Plateau, EG",       risk_level:"low",    crop_type:"rice",    temperature:24.1, humidity:63.8 },
-  { id:"s-003", name:"Gamma Storage",  location:"Alexandria Coast, EG",   risk_level:"medium", crop_type:"corn",    temperature:29.7, humidity:72.5 },
-  { id:"s-004", name:"Delta Vault",    location:"Luxor Upper Egypt",      risk_level:"high",   crop_type:"barley",  temperature:34.2, humidity:81.3 },
-  { id:"s-005", name:"Epsilon Hub",    location:"Port Said, EG",          risk_level:"low",    crop_type:"sorghum", temperature:23.6, humidity:58.9 },
-  { id:"s-006", name:"Zeta Station",   location:"Aswan, EG",              risk_level:"none",   crop_type:"soybean", temperature:21.0, humidity:44.7 },
-  { id:"s-007", name:"Eta Compound",   location:"Mansoura, EG",           risk_level:"medium", crop_type:"wheat",   temperature:28.3, humidity:69.1 },
-  { id:"s-008", name:"Theta Terminal", location:"Ismailia, EG",           risk_level:"high",   crop_type:"corn",    temperature:33.8, humidity:79.4 },
+  { id: "s-001", name: "Alpha Depot", location: "Cairo Governorate, EG", risk_level: "none", crop_type: "wheat", temperature: 22.4, humidity: 51.2 },
+  { id: "s-002", name: "Beta Reserve", location: "Giza Plateau, EG", risk_level: "low", crop_type: "rice", temperature: 24.1, humidity: 63.8 },
+  { id: "s-003", name: "Gamma Storage", location: "Alexandria Coast, EG", risk_level: "medium", crop_type: "corn", temperature: 29.7, humidity: 72.5 },
+  { id: "s-004", name: "Delta Vault", location: "Luxor Upper Egypt", risk_level: "high", crop_type: "barley", temperature: 34.2, humidity: 81.3 },
+  { id: "s-005", name: "Epsilon Hub", location: "Port Said, EG", risk_level: "low", crop_type: "sorghum", temperature: 23.6, humidity: 58.9 },
+  { id: "s-006", name: "Zeta Station", location: "Aswan, EG", risk_level: "none", crop_type: "soybean", temperature: 21.0, humidity: 44.7 },
+  { id: "s-007", name: "Eta Compound", location: "Mansoura, EG", risk_level: "medium", crop_type: "wheat", temperature: 28.3, humidity: 69.1 },
+  { id: "s-008", name: "Theta Terminal", location: "Ismailia, EG", risk_level: "high", crop_type: "corn", temperature: 33.8, humidity: 79.4 },
 ];
 
 // ─── Skeleton card ────────────────────────────────────────────────────────────
@@ -47,32 +49,42 @@ function SkeletonCard() {
 
 // ─── Grid animation variants ──────────────────────────────────────────────────
 
-const gridVars  = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
-const cardVars  = {
-  hidden:  { opacity: 0, y: 24, scale: 0.96 },
-  visible: { opacity: 1, y: 0,  scale: 1, transition: { type: "spring", stiffness: 260, damping: 24 } },
+const gridVars = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
+const cardVars = {
+  hidden: { opacity: 0, y: 24, scale: 0.96 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { stiffness: 260, damping: 24 } },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SilosDashboard() {
   const { compactMode } = useSettings();
+  const router = useRouter();
 
-  const [silos,     setSilos]     = useState<Silo[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState<string | null>(null);
+  const [silos, setSilos] = useState<Silo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [usingMock, setUsingMock] = useState(false);
 
   // Ref keeps the latest fetchSilos for the auto-refresh interval (if ever added)
   const spinControls = useAnimationControls();
   const isMounted = useRef(true);
-  useEffect(() => { return () => { isMounted.current = false; }; }, []);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
 
   const fetchSilos = useCallback(async () => {
     setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 2_000 });
-      if (isMounted.current) setSilos(data);
+      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 10_000 });
+      if (isMounted.current) setSilos(data.map((s: Silo) => ({
+        ...s,
+        risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
+        crop_type: s.crop_type ?? "Wheat",
+        temperature: s.temperature ?? undefined,
+        humidity: s.humidity ?? undefined,
+      })));
     } catch {
       if (isMounted.current) { setSilos(MOCK_SILOS); setUsingMock(true); }
     } finally {
@@ -80,7 +92,12 @@ export default function SilosDashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchSilos(); }, [fetchSilos]);
+  useEffect(() => {
+    fetchSilos();
+    const onFocus = () => fetchSilos();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
   // ── Premium 360° refresh handler ──
   async function handleRefresh() {
@@ -93,12 +110,12 @@ export default function SilosDashboard() {
     spinControls.set({ rotate: 0 });
   }
 
-  const total   = silos.length;
-  const atRisk  = silos.filter((s) => s.risk_level === "high" || s.risk_level === "medium").length;
-  const nominal = silos.filter((s) => s.risk_level === "none"  || s.risk_level === "low").length;
+  const total = silos.length;
+  const atRisk = silos.filter((s) => s.risk_level === "high" || s.risk_level === "medium").length;
+  const nominal = silos.filter((s) => s.risk_level === "none" || s.risk_level === "low").length;
 
   // ── Dynamic grid classes from UIContext ──
-  const gridGap  = compactMode ? "gap-3" : "gap-5";
+  const gridGap = compactMode ? "gap-3" : "gap-5";
   const gridCols = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
   return (
@@ -122,7 +139,7 @@ export default function SilosDashboard() {
         {/* ── Premium Glassmorphic Refresh Button ── */}
         <motion.button
           onClick={handleRefresh}
-          disabled={loading}
+          disabled={false}
           whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(52,211,153,0.25)" }}
           whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 340, damping: 24 }}
@@ -152,9 +169,9 @@ export default function SilosDashboard() {
           className="grid grid-cols-3 gap-3"
         >
           {[
-            { label: "Total Silos", value: total,   accent: "text-slate-100" },
-            { label: "At Risk",     value: atRisk,  accent: "text-rose-400"  },
-            { label: "Nominal",     value: nominal, accent: "text-emerald-400" },
+            { label: "Total Silos", value: total, accent: "text-slate-100" },
+            { label: "At Risk", value: atRisk, accent: "text-rose-400" },
+            { label: "Nominal", value: nominal, accent: "text-emerald-400" },
           ].map(({ label, value, accent }) => (
             <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/[0.025] border border-white/[0.05]">
               <span className={`font-outfit font-bold text-2xl ${accent}`}>{value}</span>
@@ -231,6 +248,9 @@ export default function SilosDashboard() {
           <p className="font-plus-jakarta text-slate-600 text-sm">No silos registered yet.</p>
         </motion.div>
       )}
+
+      {/* ── Floating AI Assistant ── */}
+      <ChatBot />
     </div>
   );
 }

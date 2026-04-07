@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import init_db, close_db
-from app.api import silos, sensors, images, alerts
+from app.api import silos, sensors, images, alerts, chat
 from app.ws.alerts import manager
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,11 +19,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(silos.router)
 app.include_router(sensors.router)
 app.include_router(images.router)
 app.include_router(alerts.router)
-
+app.include_router(chat.router)
 
 @app.websocket("/ws/alerts")
 async def websocket_alerts(websocket: WebSocket):

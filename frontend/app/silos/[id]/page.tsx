@@ -147,8 +147,12 @@ export default function SiloDetailPage() {
     ]);
     setSilo(s.status === "fulfilled" ? s.value.data : { ...MOCK_SILO, id: id ?? MOCK_SILO.id });
     setSensors(sens.status === "fulfilled" ? sens.value.data : makeMockSensor(24));
-    setAlerts(al.status === "fulfilled" ? al.value.data : MOCK_ALERTS);
-    setLoading(false);
+setAlerts(al.status === "fulfilled" ? al.value.data.map((a: any) => ({
+  ...a,
+  severity: a.risk_level === "high" ? "critical" : a.risk_level === "medium" ? "warning" : "info",
+  timestamp: a.triggered_at,
+  read: a.is_read,
+})) : MOCK_ALERTS);    setLoading(false);
   }, [id]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
