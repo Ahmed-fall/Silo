@@ -93,6 +93,7 @@ body {
 }
 
 /* ── Glow utilities ──────────────────────────────────────────────────────── */
+/* ── Glow utilities ──────────────────────────────────────────────────────── */
 .glow-emerald {
   box-shadow: 0 0 28px rgba(52, 211, 153, 0.30);
 }
@@ -116,23 +117,206 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #334155;
-  /* Slate-700 */
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #475569;
-  /* Slate-600 */
 }
 
-/* Hide scrollbar for suggestions row but keep it scrollable */
 .custom-scrollbar-hide {
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 .custom-scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  @media print — PDF / Print Report styles                               ║
+   ║                                                                         ║
+   ║  Layout stack this must handle:                                         ║
+   ║    <body class="flex overflow-hidden">                                  ║
+   ║      <Sidebar />          ← flex sibling, must be hidden                ║
+   ║      <div class="flex-1"> ← content column                              ║
+   ║        <header />         ← top bar, must be hidden                     ║
+   ║        <main class="overflow-y-auto p-4 lg:p-6">                        ║
+   ║          <div class="min-h-full max-w-6xl mx-auto"> ← page container   ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+@media print {
+
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm 12mm 12mm;
+  }
+
+  html {
+    color-scheme: light;
+    height: auto !important;
+  }
+
+  body {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body::before {
+    content: "SILO  ·  Smart Grain Management & AI Diagnostics";
+    display: block;
+    font-family: var(--font-outfit, system-ui, sans-serif);
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #64748b;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
+  }
+
+  body::after {
+    content: "Report generated: " attr(data-print-date);
+    display: block;
+    font-family: var(--font-outfit, system-ui, sans-serif);
+    font-size: 8pt;
+    color: #94a3b8;
+    text-align: right;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 6pt;
+    margin-top: 12pt;
+  }
+
+  aside,
+  header,
+  [data-print-hide="true"],
+  .no-print {
+    display: none !important;
+  }
+
+  body > div,
+  body > * > div,
+  .overflow-hidden,
+  .overflow-y-auto,
+  .flex-1 {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  main {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  main > * {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  [class*="bg-slate-9"],
+  [class*="bg-slate-8"],
+  [class*="bg-slate-95"],
+  .glass {
+    background: #f8fafc !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  [class*="text-white"],
+  [class*="text-slate-1"],
+  [class*="text-slate-2"],
+  [class*="text-slate-3"] {
+    color: #0f172a !important;
+  }
+
+  [class*="text-slate-4"],
+  [class*="text-slate-5"],
+  [class*="text-slate-6"],
+  [class*="text-slate-7"] {
+    color: #475569 !important;
+  }
+
+  [class*="text-emerald"],
+  [class*="text-rose"],
+  [class*="text-amber"],
+  [class*="text-cyan"],
+  [class*="text-fuchsia"],
+  [class*="text-violet"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [class*="grid-cols-5"],
+  [class*="sm:grid-cols-5"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  [class*="lg:grid-cols-2"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  svg text {
+    fill: #475569 !important;
+  }
+
+  .recharts-cartesian-grid line {
+    stroke: #e2e8f0 !important;
+  }
+
+  .recharts-line-curve {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-print-section="break-before"] {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  [data-print-section="avoid-break"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .h-full, .min-h-full, .h-screen {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
 }

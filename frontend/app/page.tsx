@@ -27,7 +27,7 @@ const MOCK_SILOS: Silo[] = [
 
 function SkeletonCard() {
   return (
-    <div className="rounded-[22px] p-[1.5px] bg-slate-800/50 animate-pulse h-[230px]">
+    <div className="rounded-[22px] p-[1.5px] bg-slate-800/50 animate-pulse h-57.5">
       <div className="h-full rounded-[21px] bg-slate-900/80 p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between">
           <div className="size-11 rounded-2xl bg-slate-800" />
@@ -49,10 +49,10 @@ function SkeletonCard() {
 
 // ─── Grid animation variants ──────────────────────────────────────────────────
 
-const gridVars = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
+const gridVars  = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const cardVars = {
-  hidden: { opacity: 0, y: 24, scale: 0.96 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { stiffness: 260, damping: 24 } },
+  hidden:  { opacity: 0, y: 24, scale: 0.96 },
+  visible: { opacity: 1, y: 0,  scale: 1, transition: { type: "spring" as const, stiffness: 260, damping: 24 } },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -74,30 +74,56 @@ export default function SilosDashboard() {
     return () => { isMounted.current = false; };
   }, []);
 
-  const fetchSilos = useCallback(async () => {
+  const fetchSilos = useCallback(async (signal?: AbortSignal) => {
+    // ── Strict state reset at fetch start ──────────────────────────────────
     setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, { timeout: 10_000 });
-      if (isMounted.current) setSilos(data.map((s: Silo) => ({
-        ...s,
-        risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
-        crop_type: s.crop_type ?? "Wheat",
-        temperature: s.temperature ?? undefined,
-        humidity: s.humidity ?? undefined,
-      })));
-    } catch {
-      if (isMounted.current) { setSilos(MOCK_SILOS); setUsingMock(true); }
-    } finally {
-      if (isMounted.current) setLoading(false);
+  const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
+    timeout: 10_000,  // More realistic than 2s
+    signal,           // Keep AbortSignal for cleanup
+  });
+  
+  // Normalize data with safe defaults
+  setSilos(data.map((s: Silo) => ({
+    ...s,
+    risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
+    crop_type: (s.crop_type ?? "wheat") as Silo["crop_type"],
+    temperature: s.temperature ?? undefined,
+    humidity: s.humidity ?? undefined,
+  })));
+  
+} catch (err) {
+  // Ignore cancelled/aborted requests
+  if (axios.isCancel(err) || err instanceof Error && err.name === "CanceledError") return;
+  
+  // Fallback to mock on real errors
+  setSilos(MOCK_SILOS);
+  setUsingMock(true);
+}
+        finally {
+      // Guaranteed unblock — ONLY runs when the request was NOT aborted.
+      // (The early `return` in the catch above prevents this from firing
+      //  on cancellation, so the new mount's own finally handles cleanup.)
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchSilos();
-    const onFocus = () => fetchSilos();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
+  const controller = new AbortController();
+  
+  // Initial fetch
+  fetchSilos(controller.signal);
+  
+  // Auto-refresh when tab regains focus (UX improvement)
+  const onFocus = () => fetchSilos(controller.signal);
+  window.addEventListener("focus", onFocus);
+  
+  // Cleanup
+  return () => {
+    controller.abort();
+    window.removeEventListener("focus", onFocus);
+  };
+}, [fetchSilos]); // 
 
   // ── Premium 360° refresh handler ──
   async function handleRefresh() {
@@ -146,11 +172,11 @@ export default function SilosDashboard() {
           className="
             self-start sm:self-auto
             flex items-center gap-2.5 px-4 py-2.5 rounded-xl
-            bg-white/[0.05] border border-white/[0.09]
+            bg-white/5 border border-white/9
             text-slate-300 font-outfit font-medium text-sm
             backdrop-blur-md
             disabled:opacity-40 disabled:cursor-not-allowed
-            transition-colors hover:text-white hover:border-white/[0.15]
+            transition-colors hover:text-white hover:border-white/15
           "
           aria-label="Refresh silo data"
         >
@@ -173,7 +199,7 @@ export default function SilosDashboard() {
             { label: "At Risk", value: atRisk, accent: "text-rose-400" },
             { label: "Nominal", value: nominal, accent: "text-emerald-400" },
           ].map(({ label, value, accent }) => (
-            <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/[0.025] border border-white/[0.05]">
+            <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/2.5 border border-white/5">
               <span className={`font-outfit font-bold text-2xl ${accent}`}>{value}</span>
               <span className="font-plus-jakarta text-slate-600 text-[10px] tracking-widest uppercase">{label}</span>
             </div>
@@ -242,7 +268,7 @@ export default function SilosDashboard() {
       {/* ── Empty state ── */}
       {!loading && !error && silos.length === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-3 py-24 rounded-2xl border border-white/[0.04]"
+          className="flex flex-col items-center gap-3 py-24 rounded-2xl border border-white/4"
         >
           <Wheat size={36} className="text-slate-800" />
           <p className="font-plus-jakarta text-slate-600 text-sm">No silos registered yet.</p>

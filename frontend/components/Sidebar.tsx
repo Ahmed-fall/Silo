@@ -16,7 +16,13 @@ const NAV = [
     match: (p: string) => p === "/",
   },
   // "Silos" removed — Dashboard IS the silo grid
-  { type: "coming" as const, label: "Live Map", icon: <Map size={16} />, name: "Live Map" },
+  {
+    type: "link" as const,
+    href: "/live-map",
+    label: "Live Map",
+    icon: <Map size={16} />,
+    match: (p: string) => p.startsWith("/live-map"),
+  },
   { type: "coming" as const, label: "Reports",  icon: <BarChart2 size={16} />, name: "Analytics & Reports" },
   { type: "settings" as const, label: "Settings", icon: <Settings size={16} /> },
 ];
