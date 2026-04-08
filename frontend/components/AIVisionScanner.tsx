@@ -46,22 +46,28 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
 
     const formData = new FormData();
     formData.append("file", file);
-    
 
     try {
       // 1. DYNAMIC API FIRST: Try hitting the real backend with a 3-second timeout
       const res = await axios.post(`${API_BASE}/images/upload?silo_id=${siloId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 3000, 
+        timeout: 3000,
       });
 
-      // Assuming success, parse the real data
-      const isIssue = res.data.detected_label.toLowerCase().includes("disease") || 
-                      res.data.detected_label.toLowerCase().includes("rust");
-                      
+      const label = res.data.detected_label;
+      const conf = res.data.confidence;
+
+      // Handle case where backend responded but vision service was unavailable
+      if (!label || conf == null) {
+        throw new Error("AI Vision service did not return a result");
+      }
+
+      const isIssue = label.toLowerCase().includes("disease") ||
+                      label.toLowerCase().includes("rust");
+
       setResult({
-        label: res.data.detected_label,
-        confidence: res.data.confidence * 100,
+        label,
+        confidence: conf * 100,
         isIssue,
       });
 

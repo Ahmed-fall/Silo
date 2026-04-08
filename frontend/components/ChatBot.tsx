@@ -5,6 +5,11 @@ import { Send, Loader2, MessageSquare, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
+// Configurable API URL - defaults to localhost for local dev
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Configurable model - if empty, backend uses its default from .env
+const DEFAULT_MODEL = process.env.NEXT_PUBLIC_OLLAMA_MODEL || undefined;
+
 type Message = {
   role: 'user' | 'assistant';
   content: string;
@@ -42,18 +47,29 @@ export default function ChatBot() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, model: "llama3.2", history: messages }),
+        body: JSON.stringify({ 
+          message: text, 
+          model: DEFAULT_MODEL,  // Let backend use .env default if not set
+          history: messages 
+        }),
       });
 
-      if (!response.ok) throw new Error('API Error');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `API Error (${response.status})`);
+      }
 
       const data = await response.json();
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Could not connect to the AI server.' }]);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `⚠️ Could not connect to the AI server.\n\n**Details:** ${errorMsg}\n\n**Fix:** Make sure the backend is running and Ollama is accessible.` 
+      }]);
     } finally {
       setIsLoading(false);
     }

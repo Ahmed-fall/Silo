@@ -24,6 +24,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Override .env for Docker environment
+      # For Docker, Ollama runs on your WSL host, accessible via host.docker.internal
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -49,21 +54,13 @@ services:
       - "8002:8002"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 
-  ai-chatbot:
-    build:
-      context: ./ai-chatbot
-    ports:
-      - "8003:8000"
-    environment:
-      - OLLAMA_URL=http://host.docker.internal:11434/api/chat
-      - MODEL_NAME=llama3.2
-    restart: unless-stopped
-
   frontend:
     build: ./frontend
     restart: always
     ports:
       - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend
 
