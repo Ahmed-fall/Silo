@@ -1,24 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { motion, useAnimationControls } from "framer-motion";
 import { API_BASE } from "@/lib/api";
 import SiloCard, { type Silo } from "@/components/SiloCard";
 import { useSettings } from "@/context/SettingsContext";
 import { RefreshCw, ServerCrash, Wheat, LayoutGrid } from "lucide-react";
+import ChatBot from '@/components/ChatBot';
 
 // ─── Mock data — includes temperature + humidity for sensor widgets ───────────
 
 const MOCK_SILOS: Silo[] = [
-  { id:"s-001", name:"Alpha Depot",    location:"Cairo Governorate, EG",  risk_level:"none",   crop_type:"wheat",   temperature:22.4, humidity:51.2 },
-  { id:"s-002", name:"Beta Reserve",   location:"Giza Plateau, EG",       risk_level:"low",    crop_type:"rice",    temperature:24.1, humidity:63.8 },
-  { id:"s-003", name:"Gamma Storage",  location:"Alexandria Coast, EG",   risk_level:"medium", crop_type:"corn",    temperature:29.7, humidity:72.5 },
-  { id:"s-004", name:"Delta Vault",    location:"Luxor Upper Egypt",      risk_level:"high",   crop_type:"barley",  temperature:34.2, humidity:81.3 },
-  { id:"s-005", name:"Epsilon Hub",    location:"Port Said, EG",          risk_level:"low",    crop_type:"sorghum", temperature:23.6, humidity:58.9 },
-  { id:"s-006", name:"Zeta Station",   location:"Aswan, EG",              risk_level:"none",   crop_type:"soybean", temperature:21.0, humidity:44.7 },
-  { id:"s-007", name:"Eta Compound",   location:"Mansoura, EG",           risk_level:"medium", crop_type:"wheat",   temperature:28.3, humidity:69.1 },
-  { id:"s-008", name:"Theta Terminal", location:"Ismailia, EG",           risk_level:"high",   crop_type:"corn",    temperature:33.8, humidity:79.4 },
+  { id: "s-001", name: "Alpha Depot", location: "Cairo Governorate, EG", risk_level: "none", crop_type: "wheat", temperature: 22.4, humidity: 51.2 },
+  { id: "s-002", name: "Beta Reserve", location: "Giza Plateau, EG", risk_level: "low", crop_type: "rice", temperature: 24.1, humidity: 63.8 },
+  { id: "s-003", name: "Gamma Storage", location: "Alexandria Coast, EG", risk_level: "medium", crop_type: "corn", temperature: 29.7, humidity: 72.5 },
+  { id: "s-004", name: "Delta Vault", location: "Luxor Upper Egypt", risk_level: "high", crop_type: "barley", temperature: 34.2, humidity: 81.3 },
+  { id: "s-005", name: "Epsilon Hub", location: "Port Said, EG", risk_level: "low", crop_type: "sorghum", temperature: 23.6, humidity: 58.9 },
+  { id: "s-006", name: "Zeta Station", location: "Aswan, EG", risk_level: "none", crop_type: "soybean", temperature: 21.0, humidity: 44.7 },
+  { id: "s-007", name: "Eta Compound", location: "Mansoura, EG", risk_level: "medium", crop_type: "wheat", temperature: 28.3, humidity: 69.1 },
+  { id: "s-008", name: "Theta Terminal", location: "Ismailia, EG", risk_level: "high", crop_type: "corn", temperature: 33.8, humidity: 79.4 },
 ];
 
 // ─── Skeleton card ────────────────────────────────────────────────────────────
@@ -57,34 +59,48 @@ const cardVars = {
 
 export default function SilosDashboard() {
   const { compactMode } = useSettings();
+  const router = useRouter();
 
-  const [silos,     setSilos]     = useState<Silo[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState<string | null>(null);
+  const [silos, setSilos] = useState<Silo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [usingMock, setUsingMock] = useState(false);
 
   // Ref keeps the latest fetchSilos for the auto-refresh interval (if ever added)
   const spinControls = useAnimationControls();
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
 
   const fetchSilos = useCallback(async (signal?: AbortSignal) => {
     // ── Strict state reset at fetch start ──────────────────────────────────
     setLoading(true); setError(null); setUsingMock(false);
     try {
-      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
-        timeout: 2_000,
-        signal,           // links this request to the AbortController
-      });
-      setSilos(data);
-    } catch (err) {
-      // Aborted requests (user navigated away mid-flight) — do nothing.
-      // We must NOT set mock data or flip loading here; the effect cleanup
-      // will have already run, and the new mount will start a fresh fetch.
-      if (axios.isCancel(err)) return;
-
-      // Real failure (timeout, network error, 5xx) — fall back to mock data.
-      setSilos(MOCK_SILOS);
-      setUsingMock(true);
-    } finally {
+  const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
+    timeout: 10_000,  // More realistic than 2s
+    signal,           // Keep AbortSignal for cleanup
+  });
+  
+  // Normalize data with safe defaults
+  setSilos(data.map((s: Silo) => ({
+    ...s,
+    risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
+    crop_type: (s.crop_type ?? "wheat") as Silo["crop_type"],
+    temperature: s.temperature ?? undefined,
+    humidity: s.humidity ?? undefined,
+  })));
+  
+} catch (err) {
+  // Ignore cancelled/aborted requests
+  if (axios.isCancel(err) || err instanceof Error && err.name === "CanceledError") return;
+  
+  // Fallback to mock on real errors
+  setSilos(MOCK_SILOS);
+  setUsingMock(true);
+}
+        finally {
       // Guaranteed unblock — ONLY runs when the request was NOT aborted.
       // (The early `return` in the catch above prevents this from firing
       //  on cancellation, so the new mount's own finally handles cleanup.)
@@ -93,14 +109,21 @@ export default function SilosDashboard() {
   }, []);
 
   useEffect(() => {
-    // Each effect invocation gets its own AbortController — this is what
-    // makes remounts work correctly. On unmount, the cleanup cancels the
-    // in-flight request. On remount, a brand-new controller is created,
-    // so the new fetch runs completely independently.
-    const controller = new AbortController();
-    fetchSilos(controller.signal);
-    return () => controller.abort();
-  }, [fetchSilos]);
+  const controller = new AbortController();
+  
+  // Initial fetch
+  fetchSilos(controller.signal);
+  
+  // Auto-refresh when tab regains focus (UX improvement)
+  const onFocus = () => fetchSilos(controller.signal);
+  window.addEventListener("focus", onFocus);
+  
+  // Cleanup
+  return () => {
+    controller.abort();
+    window.removeEventListener("focus", onFocus);
+  };
+}, [fetchSilos]); // 
 
   // ── Premium 360° refresh handler ──
   async function handleRefresh() {
@@ -113,12 +136,12 @@ export default function SilosDashboard() {
     spinControls.set({ rotate: 0 });
   }
 
-  const total   = silos.length;
-  const atRisk  = silos.filter((s) => s.risk_level === "high" || s.risk_level === "medium").length;
-  const nominal = silos.filter((s) => s.risk_level === "none"  || s.risk_level === "low").length;
+  const total = silos.length;
+  const atRisk = silos.filter((s) => s.risk_level === "high" || s.risk_level === "medium").length;
+  const nominal = silos.filter((s) => s.risk_level === "none" || s.risk_level === "low").length;
 
   // ── Dynamic grid classes from UIContext ──
-  const gridGap  = compactMode ? "gap-3" : "gap-5";
+  const gridGap = compactMode ? "gap-3" : "gap-5";
   const gridCols = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
   return (
@@ -142,7 +165,7 @@ export default function SilosDashboard() {
         {/* ── Premium Glassmorphic Refresh Button ── */}
         <motion.button
           onClick={handleRefresh}
-          disabled={loading}
+          disabled={false}
           whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(52,211,153,0.25)" }}
           whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 340, damping: 24 }}
@@ -172,9 +195,9 @@ export default function SilosDashboard() {
           className="grid grid-cols-3 gap-3"
         >
           {[
-            { label: "Total Silos", value: total,   accent: "text-slate-100" },
-            { label: "At Risk",     value: atRisk,  accent: "text-rose-400"  },
-            { label: "Nominal",     value: nominal, accent: "text-emerald-400" },
+            { label: "Total Silos", value: total, accent: "text-slate-100" },
+            { label: "At Risk", value: atRisk, accent: "text-rose-400" },
+            { label: "Nominal", value: nominal, accent: "text-emerald-400" },
           ].map(({ label, value, accent }) => (
             <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/2.5 border border-white/5">
               <span className={`font-outfit font-bold text-2xl ${accent}`}>{value}</span>
@@ -251,6 +274,9 @@ export default function SilosDashboard() {
           <p className="font-plus-jakarta text-slate-600 text-sm">No silos registered yet.</p>
         </motion.div>
       )}
+
+      {/* ── Floating AI Assistant ── */}
+      <ChatBot />
     </div>
   );
 }

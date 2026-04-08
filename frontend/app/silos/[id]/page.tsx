@@ -197,9 +197,22 @@ export default function SiloDetailPage() {
     ]);
     setSilo(s.status    === "fulfilled" ? s.value.data    : { ...MOCK_SILO, id: id ?? MOCK_SILO.id });
     setSensors(sens.status === "fulfilled" ? sens.value.data : makeMockSensor(24));
-    setAlerts(al.status   === "fulfilled" ? al.value.data   : MOCK_ALERTS);
-    setForecast(fc.status  === "fulfilled" ? fc.value.data   : []);
-    setLoading(false);
+    setAlerts(al.status === "fulfilled" 
+  ? al.value.data.map((a: SiloAlert) => ({
+      ...a,
+      // Ensure consistent shape for AlertRow component
+      risk_level: (a.risk_level ?? "low") as RiskLevel,
+      triggered_at: a.triggered_at,
+      is_read: a.is_read ?? false,
+    }))
+  : MOCK_ALERTS
+);
+
+// Set forecast data (empty array fallback is fine)
+setForecast(fc.status === "fulfilled" ? fc.value.data : []);
+
+// Always end with setLoading(false)
+setLoading(false);
   }, [id]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
