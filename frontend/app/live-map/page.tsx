@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
 import axios from "axios";
 import Link from "next/link";
 import { API_BASE } from "@/lib/api";
@@ -43,81 +42,83 @@ interface ApiSilo {
   fill_pct?: number;
 }
 
-// ─── Risk / AI configs ────────────────────────────────────────────────────────
+// ─── Risk / AI configs (STRICT LIGHT MODE: Turquoise / Bronze / Red) ─────────
 
 const RISK_CFG: Record<RiskLevel, {
   dot: string; ring: string; badge: string; label: string;
-  icon: React.ReactNode; drawerBorder: string; dur: number;
+  icon: React.ReactNode; drawerBorder: string; dur: number; border: string;
 }> = {
-  none: { dot: "#10b981", ring: "rgba(16,185,129,0.36)", badge: "bg-emerald-950/60 border-emerald-700/40 text-emerald-300", label: "Nominal", icon: <ShieldCheck size={11} />, drawerBorder: "from-emerald-500/50 via-emerald-500/10 to-transparent", dur: 2.8 },
-  low: { dot: "#34d399", ring: "rgba(52,211,153,0.30)", badge: "bg-emerald-950/50 border-emerald-700/30 text-emerald-400", label: "Low Risk", icon: <ShieldCheck size={11} />, drawerBorder: "from-emerald-400/40 via-emerald-400/8 to-transparent", dur: 2.6 },
-  medium: { dot: "#fbbf24", ring: "rgba(251,191,36,0.36)", badge: "bg-amber-950/60 border-amber-700/40 text-amber-300", label: "Caution", icon: <AlertTriangle size={11} />, drawerBorder: "from-amber-400/50 via-amber-400/10 to-transparent", dur: 2.0 },
-  high: { dot: "#f87171", ring: "rgba(248,113,113,0.40)", badge: "bg-rose-950/60 border-rose-700/40 text-rose-300", label: "Critical", icon: <Flame size={11} />, drawerBorder: "from-rose-500/55 via-rose-500/10 to-transparent", dur: 1.5 },
+  none: { dot: "#40E0D0", ring: "rgba(64,224,208,0.40)", badge: "glass-tactical", label: "Nominal", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />, drawerBorder: "from-[#40E0D0]/60 via-[#40E0D0]/15 to-transparent", dur: 2.8, border: "rgba(64,224,208,0.30)" },
+  low: { dot: "#40E0D0", ring: "rgba(64,224,208,0.35)", badge: "glass-tactical", label: "Low Risk", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />, drawerBorder: "from-[#40E0D0]/50 via-[#40E0D0]/10 to-transparent", dur: 2.6, border: "rgba(64,224,208,0.30)" },
+  medium: { dot: "#CD7F32", ring: "rgba(205,127,50,0.40)", badge: "glass-tactical", label: "Caution", icon: <AlertTriangle size={11} style={{ color: "var(--warning)" }} />, drawerBorder: "from-[#CD7F32]/60 via-[#CD7F32]/15 to-transparent", dur: 2.0, border: "rgba(205,127,50,0.25)" },
+  high: { dot: "#E11D48", ring: "rgba(225,29,72,0.45)", badge: "glass-tactical", label: "Critical", icon: <Flame size={11} style={{ color: "var(--alert)" }} />, drawerBorder: "from-[#E11D48]/65 via-[#E11D48]/15 to-transparent", dur: 1.5, border: "rgba(225,29,72,0.25)" },
 };
 
 const AI_CFG: Record<AIStatus, { label: string; detail: string; color: string; bg: string; border: string }> = {
-  healthy: { label: "All Clear", detail: "No pathogens or infestations detected.", color: "text-emerald-400", bg: "bg-emerald-950/40", border: "border-emerald-700/35" },
-  warning: { label: "Anomaly Detected", detail: "Unclassified signature found. Review recommended.", color: "text-amber-400", bg: "bg-amber-950/40", border: "border-amber-700/35" },
-  critical: { label: "Infestation Confirmed", detail: "Aphid colony signatures confirmed. Quarantine active.", color: "text-rose-400", bg: "bg-rose-950/40", border: "border-rose-700/35" },
-  scanning: { label: "Scan In Progress", detail: "Model inference running — est. 42 s remaining.", color: "text-sky-400", bg: "bg-sky-950/40", border: "border-sky-700/35" },
+  healthy: { label: "All Clear", detail: "No pathogens or infestations detected.", color: "var(--accent)", bg: "var(--accent-subtle)", border: "var(--border-glass)" },
+  warning: { label: "Anomaly Detected", detail: "Unclassified signature found. Review recommended.", color: "var(--warning)", bg: "rgba(205,127,50,0.08)", border: "rgba(205,127,50,0.25)" },
+  critical: { label: "Infestation Confirmed", detail: "Aphid colony signatures confirmed. Quarantine active.", color: "var(--alert)", bg: "rgba(225,29,72,0.06)", border: "rgba(225,29,72,0.25)" },
+  scanning: { label: "Scan In Progress", detail: "Model inference running — est. 42 s remaining.", color: "#6366f1", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.25)" },
 };
 
 // ─── Manual Calibration Coordinates (For max-w-4xl size) ───
 
 const LOCATION_COORDS: Record<string, { top: string; left: string }> = {
-  // الساحل الغربي
-  "matrouh": { top: "25%", left: "25%" },
-  "marsamatruh": { top: "25%", left: "25%" },
+  // ── الساحل الغربي / Western Coast ──
+  "matrouh":       { top: "25%", left: "25%" },
+  "marsamatruh":   { top: "25%", left: "25%" },
 
-  // الدلتا والإسكندرية
-  "alexandria": { top: "10%", left: "42%" },
-  "iskanderia": { top: "10%", left: "42%" },
-  "beheira": { top: "22%", left: "42%" },
-  "kafrelshiekh": { top: "18%", left: "46%" },
-  "gharbia": { top: "21%", left: "46%" },
-  "tanta": { top: "21%", left: "46%" },
-  "menoufia": { top: "24%", left: "47%" },
-  "mansoura": { top: "19%", left: "49%" },
-  "dakahlia": { top: "19%", left: "49%" },
+  // ── الدلتا والإسكندرية / Delta & Alexandria ──
+  "alexandria":    { top: "10%", left: "42%" },
+  "iskanderia":    { top: "10%", left: "42%" },
+  "beheira":       { top: "22%", left: "42%" },
+  "kafrelshiekh":  { top: "18%", left: "46%" },
+  "gharbia":       { top: "21%", left: "46%" },
+  "tanta":         { top: "21%", left: "46%" },
+  "menoufia":      { top: "24%", left: "47%" },
+  "dakahlia":      { top: "19%", left: "49%" },
+  "mansoura":      { top: "19%", left: "49%" },
 
-  // مدن القناة
-  "damietta": { top: "16%", left: "51%" },
-  "portsaid": { top: "17%", left: "54%" },
-  "ismailia": { top: "22%", left: "55%" },
-  "suez": { top: "26%", left: "56%" },
+  // ── مدن القناة / Canal Cities ──
+  "damietta":      { top: "16%", left: "51%" },
+  "portsaid":      { top: "17%", left: "54%" },
+  "ismailia":      { top: "22%", left: "55%" },
+  "suez":          { top: "26%", left: "56%" },
 
-  // القاهرة الكبرى
-  "cairo": { top: "26%", left: "49%" },
-  "giza": { top: "29%", left: "47%" },
-  "helwan": { top: "28%", left: "49%" },
-  "qaliubiya": { top: "24%", left: "49%" },
-  "6thofoctober": { top: "29%", left: "45%" },
+  // ── القاهرة الكبرى / Greater Cairo ──
+  "cairo":         { top: "26%", left: "49%" },
+  "giza":          { top: "29%", left: "47%" },
+  "helwan":        { top: "28%", left: "49%" },
+  "qaliubiya":     { top: "24%", left: "49%" },
+  "6thofoctober":  { top: "29%", left: "45%" },
 
-  // سيناء
-  "northsinai": { top: "20%", left: "62%" },
-  "southsinai": { top: "35%", left: "62%" },
-  "sinai": { top: "28%", left: "62%" },
+  // ── سيناء / Sinai ──
+  "northsinai":    { top: "20%", left: "62%" },
+  "southsinai":    { top: "35%", left: "62%" },
+  "sinai":         { top: "28%", left: "62%" },
   "sharmelsheikh": { top: "40%", left: "63%" },
 
-  // الصعيد
-  "fayoum": { top: "32%", left: "46%" },
-  "benisuef": { top: "36%", left: "48%" },
-  "minya": { top: "43%", left: "46%" },
-  "assiut": { top: "52%", left: "49%" },
-  "asyut": { top: "52%", left: "49%" },
-  "sohag": { top: "58%", left: "52%" },
-  "qena": { top: "63%", left: "55%" },
-  "luxor": { top: "74%", left: "52%" },
-  "alaqsor": { top: "74%", left: "52%" },
-  "aswan": { top: "80%", left: "52%" },
+  // ── الصعيد / Upper Egypt ──
+  "fayoum":        { top: "32%", left: "46%" },
+  "benisuef":      { top: "36%", left: "48%" },
+  "minya":         { top: "43%", left: "46%" },
+  "assiut":        { top: "52%", left: "49%" },
+  "asyut":         { top: "52%", left: "49%" },
+  "sohag":         { top: "58%", left: "52%" },
+  "qena":          { top: "63%", left: "55%" },
+  "luxor":         { top: "74%", left: "52%" },
+  "alaqsor":       { top: "74%", left: "52%" },
+  "aswan":         { top: "80%", left: "52%" },
   "aswangovernorate": { top: "80%", left: "52%" },
 
-  // البحر الأحمر والوادي الجديد
-  "redsea": { top: "45%", left: "62%" },
-  "hurghada": { top: "42%", left: "61%" },
-  "marsaalam": { top: "60%", left: "66%" },
-  "newvalley": { top: "60%", left: "35%" },
-  "wadi": { top: "60%", left: "35%" },
+  // ── البحر الأحمر / Red Sea ──
+  "redsea":        { top: "45%", left: "62%" },
+  "hurghada":      { top: "42%", left: "61%" },
+  "marsaalam":     { top: "60%", left: "66%" },
+
+  // ── الوادي الجديد / New Valley ──
+  "newvalley":     { top: "60%", left: "35%" },
+  "wadi":          { top: "60%", left: "35%" },
 };
 
 
@@ -214,8 +215,16 @@ function PulseNode({ silo, isSelected, onClick }: {
         animate={isSelected ? { scale: [1, 1.18, 1] } : { scale: 1 }}
         transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
       />
-      {/* Hover tooltip */}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 px-2.5 py-1 rounded-lg whitespace-nowrap font-outfit text-[10px] font-semibold bg-slate-900/95 border border-white/10 text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-xl z-50">
+      {/* Hover tooltip — white glass */}
+      <span
+        className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 px-2.5 py-1 rounded-lg whitespace-nowrap font-outfit text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
+        style={{
+          backgroundColor: "var(--bg-elevated)",
+          border: "1px solid var(--border-glass)",
+          color: "var(--text-primary)",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+        }}
+      >
         {silo.name}
       </span>
     </motion.button>
@@ -224,17 +233,20 @@ function PulseNode({ silo, isSelected, onClick }: {
 
 // ─── Slide-over drawer ────────────────────────────────────────────────────────
 
-function SiloDrawer({ silo, onClose, isDark }: {
-  silo: MapSilo | null; onClose: () => void; isDark: boolean;
+function SiloDrawer({ silo, onClose }: {
+  silo: MapSilo | null; onClose: () => void;
 }) {
+  const riskKey = silo ? RISK_CFG[silo.risk_level] : null;
+
   return (
     <AnimatePresence>
-      {silo && (
+      {silo && riskKey && (
         <>
           {/* Backdrop */}
           <motion.div className="absolute inset-0 z-20"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
+            style={{ backgroundColor: "rgba(15,23,42,0.08)" }}
           />
           {/* Panel */}
           <motion.aside key={silo.id}
@@ -242,97 +254,128 @@ function SiloDrawer({ silo, onClose, isDark }: {
             initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 32 }}
           >
-            <div className={`w-[2.5px] shrink-0 bg-gradient-to-b ${RISK_CFG[silo.risk_level].drawerBorder}`} />
+            {/* Gradient border strip */}
+            <div className={`w-[2.5px] shrink-0 bg-gradient-to-b ${riskKey.drawerBorder}`} />
 
             <div className="flex-1 flex flex-col overflow-hidden"
               style={{
-                background: isDark ? "rgba(2,6,23,0.91)" : "rgba(248,250,252,0.93)",
+                background: "var(--bg-elevated)",
                 backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)",
-                borderLeft: isDark ? "1px solid rgba(255,255,255,0.055)" : "1px solid rgba(0,0,0,0.06)",
+                borderLeft: "1px solid var(--border-muted)",
               }}
             >
+              {/* Header */}
               <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b shrink-0"
-                style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }}>
+                style={{ borderColor: "var(--border-muted)" }}
+              >
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <MapPin size={10} className="text-slate-500 shrink-0" />
-                    <span className="font-plus-jakarta text-slate-500 text-[10px] tracking-wide uppercase truncate">{silo.location}</span>
+                    <MapPin size={10} style={{ color: "var(--text-muted)" }} className="shrink-0" />
+                    <span className="font-plus-jakarta text-[10px] tracking-wide uppercase truncate" style={{ color: "var(--text-secondary)" }}>{silo.location}</span>
                   </div>
-                  <h2 className={`font-outfit font-bold text-[1.15rem] leading-tight truncate ${isDark ? "text-white" : "text-slate-900"}`}>{silo.name}</h2>
+                  <h2 className="font-outfit font-bold text-[1.15rem] leading-tight truncate" style={{ color: "var(--text-primary)" }}>{silo.name}</h2>
                   <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold font-outfit border ${RISK_CFG[silo.risk_level].badge}`}>
-                      {RISK_CFG[silo.risk_level].icon}{RISK_CFG[silo.risk_level].label}
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold font-outfit border glass-tactical`}
+                      style={{ borderColor: riskKey.border, color: riskKey.dot }}
+                    >
+                      {riskKey.icon}{riskKey.label}
                     </span>
-                    <span className="font-plus-jakarta text-slate-500 text-[10px] capitalize">{silo.crop_type}</span>
+                    <span className="font-plus-jakarta text-[10px] capitalize" style={{ color: "var(--text-secondary)" }}>{silo.crop_type}</span>
                   </div>
                 </div>
                 <button onClick={onClose}
-                  className={`shrink-0 flex items-center justify-center size-8 rounded-xl border ml-3 transition-colors ${isDark ? "bg-slate-800/60 border-white/8 text-slate-400 hover:text-white hover:bg-slate-700/80" : "bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900"}`}
+                  className="shrink-0 flex items-center justify-center size-8 rounded-xl border ml-3 transition-colors"
+                  style={{
+                    backgroundColor: "var(--accent-subtle)",
+                    borderColor: "var(--border-glass)",
+                    color: "var(--text-secondary)",
+                  }}
                   aria-label="Close drawer"
                 >
                   <X size={13} />
                 </button>
               </div>
 
+              {/* Content */}
               <div className="flex-1 overflow-y-auto">
+                {/* Sensor cards */}
                 <div className="grid grid-cols-2 gap-3 p-5">
                   {[
                     {
-                      icon: <Thermometer size={12} className="text-amber-500" />,
+                      icon: <Thermometer size={12} style={{ color: "#f59e0b" }} />,
                       label: "Temperature",
                       value: silo.temperature !== undefined && silo.temperature !== null ? `${silo.temperature.toFixed(1)}°C` : "--",
-                      color: silo.temperature !== undefined && silo.temperature !== null ? (silo.temperature > 30 ? "#f87171" : silo.temperature > 26 ? "#fbbf24" : "#34d399") : "#64748b"
+                      color: silo.temperature !== undefined && silo.temperature !== null ? (silo.temperature > 30 ? "var(--alert)" : silo.temperature > 26 ? "var(--warning)" : "var(--accent)") : "var(--text-muted)"
                     },
                     {
-                      icon: <Droplets size={12} className="text-sky-400" />,
+                      icon: <Droplets size={12} style={{ color: "#0ea5e9" }} />,
                       label: "Humidity",
                       value: silo.humidity !== undefined && silo.humidity !== null ? `${silo.humidity.toFixed(1)}%` : "--",
-                      color: silo.humidity !== undefined && silo.humidity !== null ? (silo.humidity > 75 ? "#f87171" : silo.humidity > 65 ? "#fbbf24" : "#38bdf8") : "#64748b"
+                      color: silo.humidity !== undefined && silo.humidity !== null ? (silo.humidity > 75 ? "var(--alert)" : silo.humidity > 65 ? "var(--warning)" : "#0ea5e9") : "var(--text-muted)"
                     },
                     {
-                      icon: <Activity size={12} className="text-violet-400" />,
+                      icon: <Activity size={12} style={{ color: "#8b5cf6" }} />,
                       label: "Fill Level",
                       value: silo.fill_pct !== undefined && silo.fill_pct !== null ? `${silo.fill_pct}%` : "--",
-                      color: silo.fill_pct !== undefined && silo.fill_pct !== null ? (silo.fill_pct > 80 ? "#f87171" : silo.fill_pct > 50 ? "#fbbf24" : "#a78bfa") : "#64748b"
+                      color: silo.fill_pct !== undefined && silo.fill_pct !== null ? (silo.fill_pct > 80 ? "var(--alert)" : silo.fill_pct > 50 ? "var(--warning)" : "#8b5cf6") : "var(--text-muted)"
                     },
                     {
-                      icon: <Globe size={12} className="text-emerald-400" />,
+                      icon: <Globe size={12} style={{ color: "var(--accent)" }} />,
                       label: "Crop",
                       value: silo.crop_type,
-                      color: isDark ? "#e2e8f0" : "#0f172a"
+                      color: "var(--text-primary)"
                     },
                   ].map(({ icon, label, value, color }) => (
-                    <div key={label} className={`rounded-xl p-3.5 border ${isDark ? "bg-white/[0.03] border-white/6" : "bg-white border-slate-200"}`}>
+                    <div key={label}
+                      className="rounded-xl p-3.5 border"
+                      style={{
+                        backgroundColor: "var(--bg-base)",
+                        borderColor: "var(--border-muted)",
+                      }}
+                    >
                       <div className="flex items-center gap-1.5 mb-2">
                         {icon}
-                        <span className="font-plus-jakarta text-[10px] uppercase tracking-wider text-slate-500">{label}</span>
+                        <span className="font-plus-jakarta text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>{label}</span>
                       </div>
                       <p className="font-outfit font-bold text-xl leading-none" style={{ color }}>{value}</p>
                     </div>
                   ))}
                 </div>
 
+                {/* AI Diagnostics */}
                 <div className="px-5 pb-5">
-                  <div className={`rounded-xl p-4 border ${AI_CFG[silo.ai_status].bg} ${AI_CFG[silo.ai_status].border}`}>
+                  <div className="rounded-xl p-4 border"
+                    style={{
+                      backgroundColor: AI_CFG[silo.ai_status].bg,
+                      borderColor: AI_CFG[silo.ai_status].border,
+                    }}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <Cpu size={12} className={AI_CFG[silo.ai_status].color} />
-                        <span className="font-outfit font-semibold text-[10px] text-slate-400 uppercase tracking-wider">AI Vision Diagnostics</span>
+                        <Cpu size={12} style={{ color: AI_CFG[silo.ai_status].color }} />
+                        <span className="font-outfit font-semibold text-[10px] uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>AI Vision Diagnostics</span>
                       </div>
                       <motion.span
-                        className={`size-1.5 rounded-full ${{ healthy: "bg-emerald-400", scanning: "bg-sky-400", warning: "bg-amber-400", critical: "bg-rose-400" }[silo.ai_status]}`}
+                        className="size-1.5 rounded-full"
+                        style={{ backgroundColor: AI_CFG[silo.ai_status].color }}
                         animate={{ opacity: [1, 0.25, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       />
                     </div>
-                    <p className={`font-outfit font-bold text-sm ${AI_CFG[silo.ai_status].color}`}>{AI_CFG[silo.ai_status].label}</p>
-                    <p className={`font-plus-jakarta text-[11px] mt-1 leading-relaxed ${isDark ? "text-slate-500" : "text-slate-600"}`}>{AI_CFG[silo.ai_status].detail}</p>
+                    <p className="font-outfit font-bold text-sm" style={{ color: AI_CFG[silo.ai_status].color }}>{AI_CFG[silo.ai_status].label}</p>
+                    <p className="font-plus-jakarta text-[11px] mt-1 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{AI_CFG[silo.ai_status].detail}</p>
                   </div>
                 </div>
 
+                {/* CTA */}
                 <div className="px-5 pb-6">
                   <Link href={`/silos/${silo.id}`}
-                    className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-outfit font-semibold border transition-all ${isDark ? "bg-slate-800/60 hover:bg-slate-700/60 border-white/8 hover:border-white/14 text-slate-200 hover:text-white" : "bg-slate-900 hover:bg-slate-800 border-slate-900 text-white"}`}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-outfit font-semibold border transition-all"
+                    style={{
+                      backgroundColor: "var(--text-primary)",
+                      borderColor: "var(--text-primary)",
+                      color: "#ffffff",
+                    }}
                   >
                     <ExternalLink size={13} />Open Full Diagnostics
                   </Link>
@@ -350,15 +393,14 @@ function SiloDrawer({ silo, onClose, isDark }: {
 
 function StatusPill({ count, label, color, pulse = false }: { count: number; label: string; color: string; pulse?: boolean }) {
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border"
-      style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}>
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border glass-tactical">
       <motion.span className="size-1.5 rounded-full shrink-0"
         style={{ background: color, boxShadow: `0 0 5px ${color}` }}
         animate={pulse ? { opacity: [1, 0.3, 1], scale: [1, 0.8, 1] } : undefined}
         transition={pulse ? { duration: 1.2, repeat: Infinity } : undefined}
       />
       <span className="font-outfit font-semibold text-[11px]" style={{ color }}>{count}</span>
-      <span className="font-plus-jakarta text-slate-500 text-[10px]">{label}</span>
+      <span className="font-plus-jakarta text-[10px]" style={{ color: "var(--text-secondary)" }}>{label}</span>
     </div>
   );
 }
@@ -366,9 +408,6 @@ function StatusPill({ count, label, color, pulse = false }: { count: number; lab
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LiveMapPage() {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme !== "light";
-
   const [silos, setSilos] = useState<MapSilo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -411,35 +450,41 @@ export default function LiveMapPage() {
       <div
         className="flex items-center justify-between shrink-0 px-5 py-3 border-b z-10"
         style={{
-          background: isDark ? "rgba(2,6,23,0.96)" : "rgba(248,250,252,0.96)",
-          borderColor: isDark ? "rgba(255,255,255,0.055)" : "rgba(0,0,0,0.07)",
+          background: "var(--bg-elevated)",
+          borderColor: "var(--border-muted)",
           backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
         }}
       >
         <div className="flex items-center gap-3">
-          <Globe size={14} className="text-slate-500" />
-          <h1 className={`font-outfit font-bold text-[15px] leading-none ${isDark ? "text-white" : "text-slate-900"}`}>
+          <Globe size={14} style={{ color: "var(--text-secondary)" }} />
+          <h1 className="font-outfit font-bold text-[15px] leading-none" style={{ color: "var(--text-primary)" }}>
             Geospatial Command Map
           </h1>
-          <div className="hidden sm:block h-4 w-px" style={{ background: "rgba(255,255,255,0.10)" }} />
-          <span className="hidden sm:block font-plus-jakarta text-slate-500 text-[11px]">
+          <div className="hidden sm:block h-4 w-px" style={{ backgroundColor: "var(--border-muted)" }} />
+          <span className="hidden sm:block font-plus-jakarta text-[11px]" style={{ color: "var(--text-secondary)" }}>
             National Grain Network · Egypt
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           {loading
-            ? <span className="font-plus-jakarta text-slate-600 text-[10px] animate-pulse">Loading silos…</span>
+            ? <span className="font-plus-jakarta text-[10px] animate-pulse" style={{ color: "var(--text-muted)" }}>Loading silos…</span>
             : error
               ? (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[11px] font-outfit">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg border text-[11px] font-outfit"
+                  style={{
+                    backgroundColor: "rgba(225,29,72,0.06)",
+                    borderColor: "rgba(225,29,72,0.25)",
+                    color: "var(--alert)",
+                  }}
+                >
                   <DatabaseZap size={12} />
                   {error}
                 </div>
               )
               : <>
-                <StatusPill count={nominalCount} label="Nominal" color="#10b981" />
-                <StatusPill count={cautionCount} label="Caution" color="#fbbf24" />
-                {criticalCount > 0 && <StatusPill count={criticalCount} label="Critical" color="#f87171" pulse />}
+                <StatusPill count={nominalCount} label="Nominal" color="var(--accent)" />
+                <StatusPill count={cautionCount} label="Caution" color="var(--warning)" />
+                {criticalCount > 0 && <StatusPill count={criticalCount} label="Critical" color="var(--alert)" pulse />}
               </>
           }
         </div>
@@ -448,17 +493,12 @@ export default function LiveMapPage() {
       {/* ── Map area ── */}
       <div
         className="flex-1 relative overflow-hidden"
-        style={{ background: isDark ? "#020617" : "#f1f5f9" }}
+        style={{ background: "var(--bg-base)" }}
       >
-        {/* Subtle grid & vignette */}
+        {/* Subtle grid */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: `linear-gradient(${isDark ? "rgba(255,255,255,0.020)" : "rgba(0,0,0,0.034)"} 1px, transparent 1px), linear-gradient(90deg, ${isDark ? "rgba(255,255,255,0.020)" : "rgba(0,0,0,0.034)"} 1px, transparent 1px)`,
+          backgroundImage: "linear-gradient(rgba(15,23,42,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.03) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
-        }} />
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: isDark
-            ? "radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(2,6,23,0.85) 100%)"
-            : "radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(241,245,249,0.80) 100%)",
         }} />
 
         {/* ── Map Surface ── */}
@@ -472,7 +512,7 @@ export default function LiveMapPage() {
               preserveAspectRatio="xMidYMid meet"
               className="absolute inset-0 w-full h-full pointer-events-none"
             >
-              <g className="fill-slate-300 dark:fill-slate-800/40 stroke-white dark:stroke-slate-900 stroke-[0.8px]">
+              <g fill="#E2E8F0" stroke="rgba(64,224,208,0.40)" strokeWidth="0.8">
                 <path d="M455.45,20.84L455.61,23.14L454.67,25.01L453.76,28.25L449.5,30.96L446.57,33.69L448.99,35.79L448.53,38.64L447.54,40.8L450.09,44.67L456.13,51.35L451.76,59.19L447.12,61.6L443.38,62.93L441.64,63.2L440.4,65.36L439.32,69.74L435.99,38.04L435.77,34.86L437.85,33.19L439.11,31.81L441.75,29.7L442.82,27.89L443.84,28.8L444.25,28.67L445.47,27.49L446.47,26.18L446.09,26L446.47,24.94L447.47,25.14L449.95,23.01L450.46,22.29L451.5,21.37L451.88,20.55L453.11,20.15L453.59,19.4L453.47,18.89L454.57,18.42L454.59,19.34Z" />
                 <path d="M553.73,520.53L548.52,520.52L548.49,519.47L549.36,516.59L550.57,514.21L551.57,513.11L552.55,511.23L551.78,510.33L551.11,509.15L550.43,508.96L549.58,509.82L545.9,512.41L545.38,512.37L544.44,512.27L541.77,512.57L540.11,510.08L540.72,507.02L544.92,504.53L547.89,503.51L551.92,503.65L554.72,500.61L556.51,498.2L557.25,496.45L557.63,494.69L557.29,492.92L557.02,488.09L556.65,485.63L557.38,483.58L558.74,481.65L559.88,481.09L562.67,481.07L564.74,481.33L566.34,481.08L568.56,480.26L577.08,477.56L582.49,475.76L583.5,476.19L586.11,476.47L588.73,477.05L590.76,478.39L592.31,479.14L593.89,478.11L595.38,474.42L596.2,472.19L597.29,469.77L597.92,467.14L598.97,464.03L600.49,461.04L601.66,458.52L602.98,454.93L604.51,452.14L605.77,449.53L606,448.46L605.38,446.27L603.31,446.39L601.62,446.82L598.9,446.43L593.62,445.07L592.11,443.25L592.25,439.61L593.54,433.06L594.82,430.84L596.31,429.72L598.52,428.22L600.65,427.21L602.61,426.6L604.63,424.7L604.21,423.31L602.63,421.97L600.38,419.73L599.98,416.27L601.28,414.74L602.53,414.2L604.3,413.18L607.77,408.88L607.69,401.79L607.48,398.53L607.77,393.92L607.54,390.16L608.04,386.34L608.44,382.52L608.23,379.36L608.55,375.73L606.49,371.91L605.77,369.51L604.35,365.62L604.12,363.25L603.95,360.4L603.44,358.38L601.68,356.19L598.82,353.43L595.21,351.67L595.91,347.83L595.58,343.94L597.62,345.83L600.12,347.45L602.08,349.37L606.64,352.67L610.34,358.68L611.05,362.33L611.91,372.81L614.15,377.77L617.59,383.36L617.94,385.07L617.84,389.47L614.83,392.39L613.06,395.65L613.1,398.25L612.33,402.16L612.76,408.79L613.68,410.83L614.22,414.12L615.22,415.37L616.55,417.72L616.88,419.76L617.31,421.32L618.42,423.28L620.12,424.3L621.68,426.1L622.2,431.1L623.3,431.55L623.27,433.59L622.61,434.39L622.09,435.48L621.85,437.91L622.08,440.5L623.3,444.25L624.91,444.65L625.87,446.77L626.75,448.38L626.62,449.89L625.91,451.15L625.41,453.58L624.5,455.84L623.04,457.65L622.02,459.13L620.91,461.4L619.7,462.97L619.72,464.3L620.76,465.24L623.43,467.98L626.48,468.25L627.57,469.34L631.07,471.94L633.55,475.85L634,479.53L632.94,481.78L630.19,481.34L627.21,478.07L625.62,475.94L622.76,476.42L620.13,475.56L618.21,474.25L615.46,472.22L612.31,472.58L609.41,474.4L610.05,480.55L609.1,484.34L606.95,487.21L604.31,488.98L600.74,491.71L597.77,494.77L592.29,496.62L588.73,494.93L586.22,492.39L584.63,490.28L582.41,488.79L579.7,489.53L578.81,494.47L578.57,497.1L577.57,500.3L576.65,502.49L575.37,504.43L572.71,505.72L568.37,504.97L567.13,508.47L565.28,510.67L562.61,512.27L554.62,515.34Z" />
                 <path d="M541.57,260.75L539.36,260.74L538.38,258.74L537.27,257.69L536.24,255.56L535.29,254.32L533.51,254.12L533.02,255.29L532.01,257.08L531.2,257.77L529.56,258.8L528.45,259.85L527.82,260.06L525.31,256.07L523.17,251.45L521.1,247.48L519.18,244.46L516.39,242.8L514.72,242.38L512.56,242.12L511.54,241.55L509.3,239.54L505.09,235.41L503.66,234.57L502.41,232.8L501.74,230.51L500.22,228.54L499.12,226.35L498.49,223.62L497.43,223.12L497.11,221.04L496.27,220.21L496.19,217.81L497.22,217.71L500.23,217.71L502.08,218.23L504.52,218.64L505.97,217.19L508.74,217.39L508.33,221.02L509.27,226.06L509.99,227.72L511.59,229.6L512.55,230.09L516.02,231.37L517.48,232.51L521.46,234.15L522.61,234.25L526.16,236.18L527.85,240.92L530.84,243.26L533.55,245.6L534.9,246.57L536.52,249.88L539.09,253.93L540.87,258.07Z" />
@@ -517,7 +557,8 @@ export default function LiveMapPage() {
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <motion.div
-                  className="size-8 rounded-full border-2 border-slate-600 border-t-emerald-400"
+                  className="size-8 rounded-full border-2 border-slate-300"
+                  style={{ borderTopColor: "var(--accent)" }}
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 />
@@ -527,38 +568,29 @@ export default function LiveMapPage() {
         </div>
 
         {/* ── Slide-over drawer ── */}
-        <SiloDrawer silo={selected} onClose={() => setSelected(null)} isDark={isDark} />
+        <SiloDrawer silo={selected} onClose={() => setSelected(null)} />
 
-        {/* ── Legend & Coordinates ── */}
+        {/* ── Legend ── */}
         <motion.div
-          className="absolute bottom-4 left-4 px-3 py-3 rounded-xl border flex flex-col gap-2"
+          className="absolute bottom-4 left-4 px-3 py-3 rounded-xl border flex flex-col gap-2 glass-tactical"
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-          style={{
-            background: isDark ? "rgba(2,6,23,0.88)" : "rgba(255,255,255,0.90)",
-            borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
-            backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-          }}
         >
-          <p className="font-outfit text-slate-500 uppercase tracking-[0.18em] text-[8.5px]">Legend</p>
+          <p className="font-outfit uppercase tracking-[0.18em] text-[8.5px]" style={{ color: "var(--text-secondary)" }}>Legend</p>
           {[
-            { color: "#10b981", label: "Nominal / Low Risk" },
-            { color: "#fbbf24", label: "Caution" },
-            { color: "#f87171", label: "High Risk / Critical" },
+            { color: "var(--accent)", label: "Nominal / Low Risk" },
+            { color: "var(--warning)", label: "Caution" },
+            { color: "var(--alert)", label: "High Risk / Critical" },
           ].map(({ color, label }) => (
             <div key={label} className="flex items-center gap-2">
               <span className="size-2 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 5px ${color}` }} />
-              <span className={`font-plus-jakarta text-[10px] ${isDark ? "text-slate-400" : "text-slate-600"}`}>{label}</span>
+              <span className="font-plus-jakarta text-[10px]" style={{ color: "var(--text-secondary)" }}>{label}</span>
             </div>
           ))}
         </motion.div>
 
         <div
-          className="absolute bottom-4 right-4 px-3 py-1.5 rounded-xl border font-outfit text-[9.5px] text-slate-600"
-          style={{
-            background: isDark ? "rgba(2,6,23,0.88)" : "rgba(255,255,255,0.90)",
-            borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
-            backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-          }}
+          className="absolute bottom-4 right-4 px-3 py-1.5 rounded-xl border font-outfit text-[9.5px] glass-tactical"
+          style={{ color: "var(--text-secondary)" }}
         >
           22°N – 32°N · 24°E – 37°E · EGY
         </div>

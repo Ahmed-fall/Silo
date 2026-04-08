@@ -20,79 +20,62 @@ export interface Silo {
   humidity?: number;
 }
 
-// ─── Risk config ──────────────────────────────────────────────────────────────
+// ─── Risk config (Light Mode: White cards, colored accents only) ──────────────
 
 const RISK = {
   none: {
-    from: "#64748b", via: "#94a3b8", to: "#1e293b",
-    badgeBg: "linear-gradient(150deg,#2e3f52 0%,#1a2638 60%,#111c2b 100%)",
-    glossy: "inset 0 1px 0 rgba(255,255,255,0.13),inset 0 -1px 0 rgba(0,0,0,0.30)",
-    glow:   "0 0 0px 0px rgba(100,116,139,0)",
-    glowPk: "0 0 18px 4px rgba(100,116,139,0.28)",
-    border: "rgba(148,163,184,0.22)", text: "#cbd5e1",
-    label: "Nominal", icon: <ShieldCheck size={11} className="text-slate-300" />,
+    from: "#40E0D0", via: "#5EEAD4", to: "#CCFBF1",
+    border: "rgba(64,224,208,0.35)",
+    text: "var(--accent)",
+    label: "Nominal", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />,
     pulse: false as const,
-    cardHover: "0 0 40px 4px rgba(100,116,139,0.15)",
+    cardHover: "0 0 32px 2px rgba(64,224,208,0.12)",
   },
   low: {
-    from: "#34d399", via: "#2dd4bf", to: "#065f46",
-    badgeBg: "linear-gradient(150deg,#064e3b 0%,#042e22 60%,#021810 100%)",
-    glossy: "inset 0 1px 0 rgba(52,211,153,0.18),inset 0 -1px 0 rgba(0,0,0,0.35)",
-    glow:   "0 0 6px 1px rgba(52,211,153,0.15)",
-    glowPk: "0 0 22px 5px rgba(52,211,153,0.42)",
-    border: "rgba(52,211,153,0.30)", text: "#6ee7b7",
-    label: "Low Risk", icon: <ShieldCheck size={11} className="text-emerald-300" />,
+    from: "#40E0D0", via: "#2DD4BF", to: "#99F6E4",
+    border: "rgba(64,224,208,0.40)",
+    text: "var(--accent)",
+    label: "Low Risk", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />,
     pulse: false as const,
-    cardHover: "0 0 50px 6px rgba(52,211,153,0.18)",
+    cardHover: "0 0 40px 4px rgba(64,224,208,0.15)",
   },
   medium: {
-    from: "#fbbf24", via: "#f97316", to: "#92400e",
-    badgeBg: "linear-gradient(150deg,#78350f 0%,#451e05 60%,#2a1000 100%)",
-    glossy: "inset 0 1px 0 rgba(251,191,36,0.22),inset 0 -1px 0 rgba(0,0,0,0.40)",
-    glow:   "0 0 8px 2px rgba(251,191,36,0.22)",
-    glowPk: "0 0 24px 6px rgba(251,191,36,0.50)",
-    border: "rgba(251,191,36,0.32)", text: "#fcd34d",
-    label: "Med Risk", icon: <AlertTriangle size={11} className="text-amber-300" />,
+    from: "#CD7F32", via: "#D4A574", to: "#F5DEB3",
+    border: "rgba(205,127,50,0.40)",
+    text: "var(--warning)",
+    label: "Med Risk", icon: <AlertTriangle size={11} style={{ color: "var(--warning)" }} />,
     pulse: true as const, pulseDuration: 2.2,
-    cardHover: "0 0 50px 6px rgba(251,191,36,0.18)",
+    cardHover: "0 0 40px 4px rgba(205,127,50,0.12)",
   },
   high: {
-    from: "#fb7185", via: "#f43f5e", to: "#881337",
-    badgeBg: "linear-gradient(150deg,#9f1239 0%,#5e001e 60%,#3a000d 100%)",
-    glossy: "inset 0 1px 0 rgba(251,113,133,0.26),inset 0 -1px 0 rgba(0,0,0,0.45)",
-    glow:   "0 0 12px 3px rgba(244,63,94,0.38)",
-    glowPk: "0 0 28px 8px rgba(244,63,94,0.62)",
-    border: "rgba(244,63,94,0.42)", text: "#fda4af",
-    label: "High Risk", icon: <Flame size={11} className="text-rose-300" />,
+    from: "#E11D48", via: "#FB7185", to: "#FECDD3",
+    border: "rgba(225,29,72,0.40)",
+    text: "var(--alert)",
+    label: "High Risk", icon: <Flame size={11} style={{ color: "var(--alert)" }} />,
     pulse: true as const, pulseDuration: 1.5,
-    cardHover: "0 0 60px 8px rgba(244,63,94,0.22)",
+    cardHover: "0 0 48px 6px rgba(225,29,72,0.12)",
   },
 } as const;
 
-// ─── 3D Glossy Risk Badge ─────────────────────────────────────────────────────
+// ─── 3D Risk Badge ─────────────────────────────────────────────────────────
 
 function RiskBadge({ risk }: { risk: RiskLevel | string }) {
-  // Bulletproof fallback: sanitize and check if valid key
   const sanitizedRisk = (risk?.toLowerCase() || "none") as RiskLevel;
   const c = RISK[sanitizedRisk] || RISK.none;
-
-  const baseBox = `${c.glow}, ${c.glossy}`;
-  const peakBox = `${c.glowPk}, ${c.glossy}`;
 
   return (
     <motion.span
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-semibold tracking-wide"
       style={{
-        background: c.badgeBg,
-        border: `1px solid ${c.border}`,
-        outline: `1px solid ${c.border.replace(/[\d.]+\)$/, "0.09)")}`,
-        outlineOffset: "2px",
+        backgroundColor: "rgba(255,255,255,0.9)",
+        border: `1.5px solid ${c.border}`,
         color: c.text,
+        boxShadow: c.pulse ? `0 0 8px 1px ${c.border}` : "0 1px 4px rgba(0,0,0,0.06)",
       }}
       animate={
         c.pulse
-          ? { boxShadow: [baseBox, peakBox, baseBox] }
-          : { boxShadow: baseBox }
+          ? { boxShadow: [`0 0 4px 1px ${c.border}`, `0 0 16px 4px ${c.border}`, `0 0 4px 1px ${c.border}`] }
+          : {}
       }
       transition={c.pulse ? { duration: c.pulseDuration, repeat: Infinity, ease: "easeInOut" } : {}}
     >
@@ -105,24 +88,24 @@ function RiskBadge({ risk }: { risk: RiskLevel | string }) {
 // ─── Sensor Widget ────────────────────────────────────────────────────────────
 
 function SensorWidget({
-  icon, value, unit, gradient, glow,
+  icon, value, unit,
 }: {
   icon: React.ReactNode;
   value: number;
   unit: string;
-  gradient: string;  // Tailwind gradient classes for text
-  glow: string;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/4 border border-white/6 shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
-      <span className="text-slate-600 shrink-0">{icon}</span>
-      <div>
-        <p className={`font-outfit font-bold text-base leading-none bg-clip-text text-transparent ${gradient}`}
-          style={{ filter: `drop-shadow(0 0 5px ${glow})` }}
-        >
-          {value.toFixed(1)}<span className="text-[10px] font-medium ml-0.5">{unit}</span>
-        </p>
-      </div>
+    <div
+      className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+      style={{
+        backgroundColor: "var(--bg-base)",
+        border: "1px solid var(--border-muted)",
+      }}
+    >
+      <span style={{ color: "var(--text-muted)" }} className="shrink-0">{icon}</span>
+      <p className="font-outfit font-bold text-base leading-none" style={{ color: "var(--text-primary)" }}>
+        {value.toFixed(1)}<span className="text-[10px] font-medium" style={{ color: "var(--text-secondary)" }}>{unit}</span>
+      </p>
     </div>
   );
 }
@@ -130,7 +113,6 @@ function SensorWidget({
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 export default function SiloCard({ silo }: { silo: Silo }) {
-  // Bulletproof fallback: sanitize and check if valid key
   const riskKey = (silo.risk_level?.toLowerCase() || "none") as RiskLevel;
   const c = RISK[riskKey] || RISK.none;
 
@@ -175,11 +157,19 @@ export default function SiloCard({ silo }: { silo: Silo }) {
           <motion.div
             whileHover={{ boxShadow: c.cardHover }}
             transition={{ duration: 0.4 }}
-            className="relative h-full rounded-[21px] bg-slate-950/97 pt-6 pb-5 px-5 flex flex-col gap-4"
+            className="relative h-full rounded-[21px] pt-6 pb-5 px-5 flex flex-col gap-4"
+            style={{ backgroundColor: "rgba(255,255,255,0.97)" }}
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center justify-center size-11 rounded-2xl shrink-0 bg-white/4 border border-white/6 shadow-[0_2px_12px_rgba(0,0,0,0.5)] text-slate-400 group-hover:text-slate-200 transition-colors">
+              <div
+                className="flex items-center justify-center size-11 rounded-2xl shrink-0 transition-colors"
+                style={{
+                  backgroundColor: "var(--bg-base)",
+                  border: "1px solid var(--border-muted)",
+                  color: "var(--text-secondary)",
+                }}
+              >
                 <CropIcon crop={silo.crop_type ?? "wheat"} size={24} className="text-current" />
               </div>
               <RiskBadge risk={riskKey} />
@@ -187,14 +177,14 @@ export default function SiloCard({ silo }: { silo: Silo }) {
 
             {/* Name + location */}
             <div>
-              <h2 className="font-outfit font-bold text-lg text-white tracking-tight leading-snug line-clamp-1">{silo.name}</h2>
+              <h2 className="font-outfit font-bold text-lg tracking-tight leading-snug line-clamp-1" style={{ color: "var(--text-primary)" }}>{silo.name}</h2>
               <div className="flex items-center gap-1.5 mt-1.5">
-                <MapPin size={11} className="text-slate-600 shrink-0" />
-                <span className="font-plus-jakarta text-slate-500 text-xs truncate">{silo.location}</span>
+                <MapPin size={11} style={{ color: "var(--text-muted)" }} className="shrink-0" />
+                <span className="font-plus-jakarta text-xs truncate" style={{ color: "var(--text-secondary)" }}>{silo.location}</span>
               </div>
             </div>
 
-            {/* Sensor widgets — gradient text */}
+            {/* Sensor widgets */}
             {hasSensors && (
               <div className="grid grid-cols-2 gap-2">
                 {silo.temperature !== undefined && (
@@ -202,8 +192,6 @@ export default function SiloCard({ silo }: { silo: Silo }) {
                     icon={<Thermometer size={12} />}
                     value={silo.temperature}
                     unit="°C"
-                    gradient="bg-gradient-to-r from-amber-400 to-orange-500"
-                    glow="rgba(251,146,60,0.5)"
                   />
                 )}
                 {silo.humidity !== undefined && (
@@ -211,8 +199,6 @@ export default function SiloCard({ silo }: { silo: Silo }) {
                     icon={<Droplets size={12} />}
                     value={silo.humidity}
                     unit="%"
-                    gradient="bg-gradient-to-r from-cyan-400 to-blue-500"
-                    glow="rgba(34,211,238,0.5)"
                   />
                 )}
               </div>
@@ -220,15 +206,22 @@ export default function SiloCard({ silo }: { silo: Silo }) {
 
             {/* Crop chip */}
             {silo.crop_type && (
-              <span className="self-start px-2.5 py-1 rounded-lg text-[10px] font-medium bg-white/3 border border-white/5 text-slate-500 capitalize tracking-wide">
+              <span
+                className="self-start px-2.5 py-1 rounded-lg text-[10px] font-medium capitalize tracking-wide"
+                style={{
+                  backgroundColor: "var(--accent-subtle)",
+                  border: "1px solid var(--border-glass)",
+                  color: "var(--text-secondary)",
+                }}
+              >
                 {silo.crop_type}
               </span>
             )}
 
             {/* Footer */}
-            <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
-              <span className="font-outfit text-[9px] text-slate-700 tracking-[0.15em] uppercase">#{silo.id.toUpperCase()}</span>
-              <ShieldAlert size={12} className="text-slate-800" />
+            <div className="mt-auto pt-3 flex items-center justify-between" style={{ borderTop: "1px solid var(--border-muted)" }}>
+              <span className="font-outfit text-[9px] tracking-[0.15em] uppercase" style={{ color: "var(--text-muted)" }}>#{silo.id.toUpperCase()}</span>
+              <ShieldAlert size={12} style={{ color: "var(--text-muted)" }} />
             </div>
           </motion.div>
         </div>

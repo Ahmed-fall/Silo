@@ -15,7 +15,6 @@ const NAV = [
     icon: <LayoutDashboard size={16} />,
     match: (p: string) => p === "/",
   },
-  // "Silos" removed — Dashboard IS the silo grid
   {
     type: "link" as const,
     href: "/live-map",
@@ -36,14 +35,14 @@ function ComingSoonToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => 
       initial={{ opacity: 0, y: 12, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="flex items-start gap-3 px-4 py-3 rounded-2xl w-64 bg-slate-900/90 backdrop-blur-xl border border-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.6)]"
+      className="flex items-start gap-3 px-4 py-3 rounded-2xl w-64 glass-tactical"
     >
-      <Sparkles size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+      <Sparkles size={14} className="shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
       <div className="flex-1">
-        <p className="font-outfit font-semibold text-slate-200 text-sm">{toast.label}</p>
-        <p className="font-plus-jakarta text-slate-500 text-xs mt-0.5">Coming soon!</p>
+        <p className="font-outfit font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{toast.label}</p>
+        <p className="font-plus-jakarta text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Coming soon!</p>
       </div>
-      <button onClick={onDismiss} className="text-slate-600 hover:text-slate-300 transition-colors">
+      <button onClick={onDismiss} style={{ color: "var(--text-muted)" }} className="hover:opacity-70 transition-opacity">
         <X size={13} />
       </button>
     </motion.div>
@@ -67,19 +66,31 @@ export default function Sidebar() {
     <>
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
-      <aside className="hidden lg:flex flex-col shrink-0 w-60 border-r border-white/[0.04] bg-gradient-to-b from-slate-950 via-slate-950/95 to-slate-950 relative z-10">
+      <aside
+        className="hidden lg:flex flex-col shrink-0 w-60 relative z-10"
+        style={{
+          backgroundColor: "var(--bg-elevated)",
+          borderRight: "1px solid var(--border-glass)",
+        }}
+      >
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 pt-7 pb-6">
-          <div className="flex items-center justify-center size-9 rounded-xl shrink-0 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-[0_0_20px_rgba(52,211,153,0.4)]">
+          <div
+            className="flex items-center justify-center size-9 rounded-xl shrink-0"
+            style={{
+              backgroundColor: "var(--accent)",
+              boxShadow: "0 0 20px var(--accent-glow)",
+            }}
+          >
             <Wheat size={17} className="text-white" />
           </div>
           <div>
-            <p className="font-outfit font-bold text-[17px] text-white tracking-tight leading-none">Silo</p>
-            <p className="text-[9px] text-slate-600 tracking-[0.2em] uppercase mt-0.5">Grain Intelligence</p>
+            <p className="font-outfit font-bold text-[17px] tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>Silo</p>
+            <p className="text-[9px] tracking-[0.2em] uppercase mt-0.5" style={{ color: "var(--text-muted)" }}>Grain Intelligence</p>
           </div>
         </div>
 
-        <p className="px-5 mb-2 text-[9px] font-semibold tracking-[0.18em] text-slate-600 uppercase">Navigation</p>
+        <p className="px-5 mb-2 text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ color: "var(--text-muted)" }}>Navigation</p>
 
         <nav className="flex-1 px-3 space-y-0.5">
           {NAV.map((item, i) => {
@@ -87,15 +98,20 @@ export default function Sidebar() {
               const isActive = item.match(pathname);
               return (
                 <Link key={i} href={item.href}
-                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${isActive ? "bg-white/[0.07] text-white" : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"}`}
+                  className="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                  style={{
+                    backgroundColor: isActive ? "var(--accent-subtle)" : "transparent",
+                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                  }}
                 >
                   {isActive && (
                     <motion.span layoutId="nav-pill"
-                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-emerald-400"
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full"
+                      style={{ backgroundColor: "var(--accent)" }}
                       transition={{ type: "spring", stiffness: 420, damping: 36 }}
                     />
                   )}
-                  <span className={isActive ? "text-emerald-400" : "text-slate-600 group-hover:text-slate-400 transition-colors"}>{item.icon}</span>
+                  <span style={{ color: isActive ? "var(--accent)" : "var(--text-muted)" }} className="transition-colors">{item.icon}</span>
                   {item.label}
                 </Link>
               );
@@ -103,29 +119,46 @@ export default function Sidebar() {
             if (item.type === "settings") {
               return (
                 <button key={i} onClick={() => setSettingsOpen(true)}
-                  className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all duration-150 ${settingsOpen ? "bg-white/[0.07] text-white" : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"}`}
+                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all duration-150"
+                  style={{
+                    backgroundColor: settingsOpen ? "var(--accent-subtle)" : "transparent",
+                    color: settingsOpen ? "var(--text-primary)" : "var(--text-secondary)",
+                  }}
                 >
-                  <span className={`${settingsOpen ? "text-emerald-400" : "text-slate-600 group-hover:text-slate-400"} transition-colors`}>{item.icon}</span>
+                  <span style={{ color: settingsOpen ? "var(--accent)" : "var(--text-muted)" }} className="transition-colors">{item.icon}</span>
                   {item.label}
                 </button>
               );
             }
             return (
               <button key={i} onClick={() => addToast(item.name)}
-                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium text-slate-600 hover:text-slate-400 hover:bg-white/[0.03] transition-all"
+                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all"
+                style={{ color: "var(--text-muted)" }}
               >
-                <span className="text-slate-700 group-hover:text-slate-500 transition-colors">{item.icon}</span>
-                {item.label}
-                <span className="ml-auto text-[9px] font-semibold tracking-widest uppercase text-slate-700">Soon</span>
+                <span style={{ color: "var(--text-muted)" }} className="transition-colors">{item.icon}</span>
+                <span style={{ color: "var(--text-secondary)" }}>{item.label}</span>
+                <span className="ml-auto text-[9px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>Soon</span>
               </button>
             );
           })}
         </nav>
 
         <div className="px-5 py-4 mt-auto">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-            <p className="flex-1 font-plus-jakarta text-[10px] text-slate-500">v0.1.0 — Beta</p>
-            <div className="size-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+          <div
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+            style={{
+              backgroundColor: "var(--accent-subtle)",
+              border: "1px solid var(--border-glass)",
+            }}
+          >
+            <p className="flex-1 font-plus-jakarta text-[10px]" style={{ color: "var(--text-secondary)" }}>v0.1.0 — Beta</p>
+            <div
+              className="size-2 rounded-full"
+              style={{
+                backgroundColor: "var(--accent)",
+                boxShadow: "0 0 6px var(--accent-glow)",
+              }}
+            />
           </div>
         </div>
       </aside>

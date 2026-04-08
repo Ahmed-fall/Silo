@@ -27,21 +27,21 @@ const MOCK_SILOS: Silo[] = [
 
 function SkeletonCard() {
   return (
-    <div className="rounded-[22px] p-[1.5px] bg-slate-800/50 animate-pulse h-57.5">
-      <div className="h-full rounded-[21px] bg-slate-900/80 p-5 flex flex-col gap-4">
+    <div className="rounded-[22px] p-[1.5px] animate-pulse h-57.5" style={{ backgroundColor: "var(--border-glass)" }}>
+      <div className="h-full rounded-[21px] p-5 flex flex-col gap-4 glass-tactical" style={{ backgroundColor: "var(--bg-surface)" }}>
         <div className="flex items-start justify-between">
-          <div className="size-11 rounded-2xl bg-slate-800" />
-          <div className="h-7 w-24 rounded-full bg-slate-800" />
+          <div className="size-11 rounded-2xl" style={{ backgroundColor: "var(--accent-subtle)" }} />
+          <div className="h-7 w-24 rounded-full" style={{ backgroundColor: "var(--accent-subtle)" }} />
         </div>
         <div className="space-y-2">
-          <div className="h-5 w-3/4 rounded-lg bg-slate-800" />
-          <div className="h-3 w-1/2 rounded-lg bg-slate-800" />
+          <div className="h-5 w-3/4 rounded-lg" style={{ backgroundColor: "var(--accent-subtle)" }} />
+          <div className="h-3 w-1/2 rounded-lg" style={{ backgroundColor: "var(--accent-subtle)" }} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="h-10 rounded-xl bg-slate-800" />
-          <div className="h-10 rounded-xl bg-slate-800" />
+          <div className="h-10 rounded-xl" style={{ backgroundColor: "var(--accent-subtle)" }} />
+          <div className="h-10 rounded-xl" style={{ backgroundColor: "var(--accent-subtle)" }} />
         </div>
-        <div className="h-5 w-16 rounded-lg bg-slate-800 mt-auto" />
+        <div className="h-5 w-16 rounded-lg mt-auto" style={{ backgroundColor: "var(--accent-subtle)" }} />
       </div>
     </div>
   );
@@ -66,7 +66,6 @@ export default function SilosDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [usingMock, setUsingMock] = useState(false);
 
-  // Ref keeps the latest fetchSilos for the auto-refresh interval (if ever added)
   const spinControls = useAnimationControls();
   const isMounted = useRef(true);
   useEffect(() => {
@@ -75,59 +74,41 @@ export default function SilosDashboard() {
   }, []);
 
   const fetchSilos = useCallback(async (signal?: AbortSignal) => {
-    // ── Strict state reset at fetch start ──────────────────────────────────
     setLoading(true); setError(null); setUsingMock(false);
     try {
-  const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
-    timeout: 10_000,  // More realistic than 2s
-    signal,           // Keep AbortSignal for cleanup
-  });
-  
-  // Normalize data with safe defaults
-  setSilos(data.map((s: Silo) => ({
-    ...s,
-    risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
-    crop_type: (s.crop_type ?? "wheat") as Silo["crop_type"],
-    temperature: s.temperature ?? undefined,
-    humidity: s.humidity ?? undefined,
-  })));
-  
-} catch (err) {
-  // Ignore cancelled/aborted requests
-  if (axios.isCancel(err) || err instanceof Error && err.name === "CanceledError") return;
-  
-  // Fallback to mock on real errors
-  setSilos(MOCK_SILOS);
-  setUsingMock(true);
-}
-        finally {
-      // Guaranteed unblock — ONLY runs when the request was NOT aborted.
-      // (The early `return` in the catch above prevents this from firing
-      //  on cancellation, so the new mount's own finally handles cleanup.)
+      const { data } = await axios.get<Silo[]>(`${API_BASE}/silos`, {
+        timeout: 10_000,
+        signal,
+      });
+      setSilos(data.map((s: Silo) => ({
+        ...s,
+        risk_level: (s.risk_level ?? "none") as Silo["risk_level"],
+        crop_type: (s.crop_type ?? "wheat") as Silo["crop_type"],
+        temperature: s.temperature ?? undefined,
+        humidity: s.humidity ?? undefined,
+      })));
+    } catch (err) {
+      if (axios.isCancel(err) || err instanceof Error && err.name === "CanceledError") return;
+      setSilos(MOCK_SILOS);
+      setUsingMock(true);
+    }
+    finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-  const controller = new AbortController();
-  
-  // Initial fetch
-  fetchSilos(controller.signal);
-  
-  // Auto-refresh when tab regains focus (UX improvement)
-  const onFocus = () => fetchSilos(controller.signal);
-  window.addEventListener("focus", onFocus);
-  
-  // Cleanup
-  return () => {
-    controller.abort();
-    window.removeEventListener("focus", onFocus);
-  };
-}, [fetchSilos]); // 
+    const controller = new AbortController();
+    fetchSilos(controller.signal);
+    const onFocus = () => fetchSilos(controller.signal);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [fetchSilos]);
 
-  // ── Premium 360° refresh handler ──
   async function handleRefresh() {
-    // Spin the icon concurrently with the fetch
     spinControls.start({
       rotate: [0, 360],
       transition: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
@@ -140,7 +121,6 @@ export default function SilosDashboard() {
   const atRisk = silos.filter((s) => s.risk_level === "high" || s.risk_level === "medium").length;
   const nominal = silos.filter((s) => s.risk_level === "none" || s.risk_level === "low").length;
 
-  // ── Dynamic grid classes from UIContext ──
   const gridGap = compactMode ? "gap-3" : "gap-5";
   const gridCols = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
@@ -151,33 +131,25 @@ export default function SilosDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <LayoutGrid size={13} className="text-slate-600" />
-            <span className="font-plus-jakarta text-slate-600 text-[10px] tracking-[0.2em] uppercase">Command Centre</span>
+            <LayoutGrid size={13} style={{ color: "var(--text-muted)" }} />
+            <span className="font-plus-jakarta text-[10px] tracking-[0.2em] uppercase" style={{ color: "var(--text-muted)" }}>Command Centre</span>
           </div>
-          <h1 className="font-outfit font-extrabold text-[2rem] text-white tracking-tight leading-none">
+          <h1 className="font-outfit font-extrabold text-[2rem] tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>
             Silos Dashboard
           </h1>
-          <p className="font-plus-jakarta text-slate-500 text-sm mt-2">
+          <p className="font-plus-jakarta text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
             Real-time status across all monitored grain facilities.
           </p>
         </div>
 
-        {/* ── Premium Glassmorphic Refresh Button ── */}
+        {/* ── Refresh Button ── */}
         <motion.button
           onClick={handleRefresh}
-          disabled={false}
-          whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(52,211,153,0.25)" }}
+          whileHover={{ scale: 1.08, boxShadow: "0 0 24px var(--accent-glow)" }}
           whileTap={{ scale: 0.94 }}
           transition={{ type: "spring", stiffness: 340, damping: 24 }}
-          className="
-            self-start sm:self-auto
-            flex items-center gap-2.5 px-4 py-2.5 rounded-xl
-            bg-white/5 border border-white/9
-            text-slate-300 font-outfit font-medium text-sm
-            backdrop-blur-md
-            disabled:opacity-40 disabled:cursor-not-allowed
-            transition-colors hover:text-white hover:border-white/15
-          "
+          className="self-start sm:self-auto flex items-center gap-2.5 px-4 py-2.5 rounded-xl glass-tactical font-outfit font-medium text-sm transition-colors"
+          style={{ color: "var(--text-secondary)" }}
           aria-label="Refresh silo data"
         >
           <motion.span animate={spinControls} className="inline-flex">
@@ -195,13 +167,13 @@ export default function SilosDashboard() {
           className="grid grid-cols-3 gap-3"
         >
           {[
-            { label: "Total Silos", value: total, accent: "text-slate-100" },
-            { label: "At Risk", value: atRisk, accent: "text-rose-400" },
-            { label: "Nominal", value: nominal, accent: "text-emerald-400" },
-          ].map(({ label, value, accent }) => (
-            <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl bg-white/2.5 border border-white/5">
-              <span className={`font-outfit font-bold text-2xl ${accent}`}>{value}</span>
-              <span className="font-plus-jakarta text-slate-600 text-[10px] tracking-widest uppercase">{label}</span>
+            { label: "Total Silos", value: total, color: "var(--text-primary)" },
+            { label: "At Risk", value: atRisk, color: "var(--alert)" },
+            { label: "Nominal", value: nominal, color: "var(--accent)" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="flex flex-col items-center justify-center gap-1 py-4 px-3 rounded-2xl glass-tactical">
+              <span className="font-outfit font-bold text-2xl" style={{ color }}>{value}</span>
+              <span className="font-plus-jakarta text-[10px] tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>{label}</span>
             </div>
           ))}
         </motion.div>
@@ -211,7 +183,12 @@ export default function SilosDashboard() {
       {compactMode && !loading && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-950/30 border border-emerald-800/30 text-emerald-400 text-xs w-fit"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs w-fit"
+          style={{
+            backgroundColor: "var(--accent-subtle)",
+            border: "1px solid var(--border-glass)",
+            color: "var(--accent)",
+          }}
         >
           <LayoutGrid size={11} className="shrink-0" />
           Compact grid active
@@ -221,7 +198,12 @@ export default function SilosDashboard() {
       {/* ── Mock notice ── */}
       {usingMock && !loading && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-950/30 border border-amber-800/30 text-amber-400 text-xs"
+          className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs"
+          style={{
+            backgroundColor: "rgba(205, 127, 50, 0.08)",
+            border: "1px solid rgba(205, 127, 50, 0.25)",
+            color: "var(--warning)",
+          }}
         >
           <Wheat size={13} className="shrink-0" />
           Backend unavailable — showing demo data.
@@ -238,20 +220,31 @@ export default function SilosDashboard() {
       {/* ── Error state ── */}
       {error && !loading && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-4 rounded-2xl border border-rose-900/40 bg-rose-950/20 py-20 text-center"
+          className="flex flex-col items-center gap-4 rounded-2xl py-20 text-center"
+          style={{
+            border: "1px solid rgba(225, 29, 72, 0.2)",
+            backgroundColor: "rgba(225, 29, 72, 0.04)",
+          }}
         >
-          <ServerCrash size={36} className="text-rose-600" />
+          <ServerCrash size={36} style={{ color: "var(--alert)" }} />
           <div>
-            <p className="font-outfit font-bold text-rose-300 text-lg">Failed to load silos</p>
-            <p className="font-plus-jakarta text-slate-500 text-sm mt-1">{error}</p>
+            <p className="font-outfit font-bold text-lg" style={{ color: "var(--alert)" }}>Failed to load silos</p>
+            <p className="font-plus-jakarta text-sm mt-1" style={{ color: "var(--text-secondary)" }}>{error}</p>
           </div>
-          <button onClick={handleRefresh} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-900/30 border border-rose-800/40 text-rose-300 text-sm hover:bg-rose-900/50 transition-all">
+          <button onClick={handleRefresh}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm transition-all"
+            style={{
+              backgroundColor: "rgba(225, 29, 72, 0.08)",
+              border: "1px solid rgba(225, 29, 72, 0.25)",
+              color: "var(--alert)",
+            }}
+          >
             <RefreshCw size={13} /> Retry
           </button>
         </motion.div>
       )}
 
-      {/* ── Silo grid — gap controlled by compactGrid ── */}
+      {/* ── Silo grid ── */}
       {!loading && !error && silos.length > 0 && (
         <motion.div
           variants={gridVars} initial="hidden" animate="visible"
@@ -268,10 +261,11 @@ export default function SilosDashboard() {
       {/* ── Empty state ── */}
       {!loading && !error && silos.length === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-3 py-24 rounded-2xl border border-white/4"
+          className="flex flex-col items-center gap-3 py-24 rounded-2xl"
+          style={{ border: "1px solid var(--border-muted)" }}
         >
-          <Wheat size={36} className="text-slate-800" />
-          <p className="font-plus-jakarta text-slate-600 text-sm">No silos registered yet.</p>
+          <Wheat size={36} style={{ color: "var(--text-muted)" }} />
+          <p className="font-plus-jakarta text-sm" style={{ color: "var(--text-secondary)" }}>No silos registered yet.</p>
         </motion.div>
       )}
 
