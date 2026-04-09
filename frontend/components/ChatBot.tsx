@@ -5,9 +5,7 @@ import { Send, Loader2, MessageSquare, X, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 
-// Configurable API URL - defaults to localhost for local dev
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-// Configurable model - if empty, backend uses its default from .env
 const DEFAULT_MODEL = process.env.NEXT_PUBLIC_OLLAMA_MODEL || undefined;
 
 type Message = {
@@ -38,7 +36,6 @@ export default function ChatBot() {
     }
   }, [messages, isOpen, isLoading]);
 
-  // We separated the sending logic so both the form and the quick buttons can use it
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
@@ -50,10 +47,10 @@ export default function ChatBot() {
       const response = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: text, 
-          model: DEFAULT_MODEL,  // Let backend use .env default if not set
-          history: messages 
+        body: JSON.stringify({
+          message: text,
+          model: DEFAULT_MODEL,
+          history: messages
         }),
       });
 
@@ -66,9 +63,9 @@ export default function ChatBot() {
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `⚠️ Could not connect to the AI server.\n\n**Details:** ${errorMsg}\n\n**Fix:** Make sure the backend is running and Ollama is accessible.` 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `⚠️ Could not connect to the AI server.\n\n**Details:** ${errorMsg}\n\n**Fix:** Make sure the backend is running and Ollama is accessible.`
       }]);
     } finally {
       setIsLoading(false);
@@ -89,26 +86,46 @@ export default function ChatBot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="w-[340px] sm:w-[400px] h-[500px] mb-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            className="w-[340px] sm:w-[400px] h-[500px] mb-4 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            style={{
+              backgroundColor: "var(--bg-elevated)",
+              backdropFilter: "blur(28px)",
+              WebkitBackdropFilter: "blur(28px)",
+              border: "1px solid var(--border-glass)",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.10), 0 24px 60px rgba(0,0,0,0.06)",
+            }}
           >
             {/* Header */}
-            <div className="bg-slate-800 p-4 border-b border-slate-700 flex justify-between items-center shadow-md z-10">
-              <div className="flex items-center gap-2 text-white font-outfit font-bold">
-                <div className="flex items-center justify-center size-7 rounded-full bg-emerald-500/20 text-emerald-400">
-                  <MessageSquare size={14} />
+            <div className="p-4 flex justify-between items-center shrink-0"
+              style={{
+                backgroundColor: "var(--accent-subtle)",
+                borderBottom: "1px solid var(--border-glass)",
+              }}
+            >
+              <div className="flex items-center gap-2 font-outfit font-bold" style={{ color: "var(--text-primary)" }}>
+                <div className="flex items-center justify-center size-7 rounded-full"
+                  style={{
+                    backgroundColor: "var(--accent)",
+                    boxShadow: "0 0 10px var(--accent-glow)",
+                  }}
+                >
+                  <MessageSquare size={14} style={{ color: "#ffffff" }} />
                 </div>
                 Ask Silo AI
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-white hover:bg-slate-700 p-1 rounded-md transition-colors"
+                className="p-1 rounded-md transition-colors"
+                style={{ color: "var(--text-secondary)" }}
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Messages Container */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar bg-slate-900/50">
+            <div className="flex-1 p-4 overflow-y-auto space-y-4 custom-scrollbar"
+              style={{ backgroundColor: "var(--bg-base)" }}
+            >
               {messages.map((msg, idx) => (
                 <motion.div
                   key={idx}
@@ -116,13 +133,16 @@ export default function ChatBot() {
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`
-                    max-w-[85%] p-3 text-sm font-plus-jakarta rounded-2xl shadow-sm
-                    ${msg.role === 'user'
-                      ? 'bg-emerald-600 text-white rounded-br-sm'
-                      : 'bg-slate-800 text-slate-200 rounded-bl-sm border border-slate-700'
-                    }
-                  `}>
+                  <div
+                    className="max-w-[85%] p-3 text-sm font-plus-jakarta rounded-2xl shadow-sm"
+                    style={{
+                      backgroundColor: msg.role === 'user' ? "var(--accent)" : "var(--bg-surface)",
+                      color: msg.role === 'user' ? "#ffffff" : "var(--text-primary)",
+                      borderBottomRightRadius: msg.role === 'user' ? "4px" : undefined,
+                      borderTopLeftRadius: msg.role === 'assistant' ? "4px" : undefined,
+                      border: msg.role === 'assistant' ? "1px solid var(--border-glass)" : "none",
+                    }}
+                  >
                     <div className="space-y-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>strong]:font-bold">
                       <ReactMarkdown>
                         {msg.content}
@@ -132,7 +152,7 @@ export default function ChatBot() {
                 </motion.div>
               ))}
 
-              {/* Quick Ask Suggestions (Only shows if no messages have been sent yet) */}
+              {/* Quick Ask Suggestions */}
               {messages.length === 1 && !isLoading && (
                 <motion.div
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
@@ -142,7 +162,13 @@ export default function ChatBot() {
                     <button
                       key={i}
                       onClick={() => sendMessage(suggestion)}
-                      className="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-3 py-2 rounded-xl transition-all text-left shadow-sm hover:shadow-emerald-500/10"
+                      className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl transition-all text-left"
+                      style={{
+                        backgroundColor: "var(--bg-surface)",
+                        color: "var(--accent)",
+                        border: "1px solid var(--border-glass)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                      }}
                     >
                       <Sparkles size={12} />
                       {suggestion}
@@ -153,8 +179,16 @@ export default function ChatBot() {
 
               {isLoading && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                  <div className="bg-slate-800 border border-slate-700 p-3 rounded-2xl rounded-bl-sm text-slate-400 text-sm flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin text-emerald-500" />
+                  <div
+                    className="p-3 rounded-2xl text-sm flex items-center gap-2"
+                    style={{
+                      backgroundColor: "var(--bg-surface)",
+                      border: "1px solid var(--border-glass)",
+                      color: "var(--text-secondary)",
+                      borderBottomLeftRadius: "4px",
+                    }}
+                  >
+                    <Loader2 size={14} className="animate-spin" style={{ color: "var(--accent)" }} />
                     Analyzing...
                   </div>
                 </motion.div>
@@ -163,19 +197,42 @@ export default function ChatBot() {
             </div>
 
             {/* Input Form */}
-            <form onSubmit={handleFormSubmit} className="p-3 bg-slate-800 border-t border-slate-700 flex gap-2">
+            <form onSubmit={handleFormSubmit} className="p-3 flex gap-2 shrink-0"
+              style={{
+                backgroundColor: "var(--bg-elevated)",
+                borderTop: "1px solid var(--border-muted)",
+              }}
+            >
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Ask about risk levels..."
                 disabled={isLoading}
-                className="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 transition-all font-plus-jakarta shadow-inner"
+                className="flex-1 rounded-xl px-4 py-2.5 text-sm font-plus-jakarta transition-all focus:outline-none"
+                style={{
+                  backgroundColor: "var(--bg-base)",
+                  border: "1px solid var(--border-muted)",
+                  color: "var(--text-primary)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "var(--accent)";
+                  e.currentTarget.style.boxShadow = "0 0 0 2px var(--accent-subtle)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-muted)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
               />
               <button
                 type="submit"
                 disabled={isLoading || !inputMessage.trim()}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center w-11 h-11 shadow-md hover:shadow-lg"
+                className="rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center w-11 h-11"
+                style={{
+                  backgroundColor: "var(--accent)",
+                  color: "#ffffff",
+                  boxShadow: isLoading ? "none" : "0 0 12px var(--accent-glow)",
+                }}
               >
                 <Send size={18} />
               </button>
@@ -197,10 +254,18 @@ export default function ChatBot() {
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-[70px] whitespace-nowrap bg-slate-800 border border-slate-700 text-slate-200 text-sm font-plus-jakarta px-4 py-2.5 rounded-2xl shadow-xl flex items-center"
+              className="absolute right-[70px] whitespace-nowrap text-sm font-plus-jakarta px-4 py-2.5 rounded-2xl shadow-xl flex items-center"
+              style={{
+                backgroundColor: "var(--bg-elevated)",
+                border: "1px solid var(--border-glass)",
+                color: "var(--text-primary)",
+              }}
             >
               Hi there! Need help? 👋
-              <div className="absolute top-1/2 -right-[5px] -translate-y-1/2 border-y-4 border-y-transparent border-l-[6px] border-l-slate-700" />
+              <div
+                className="absolute top-1/2 -right-[5px] -translate-y-1/2 border-y-4 border-y-transparent"
+                style={{ borderLeft: "6px solid var(--border-glass)" }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -212,7 +277,12 @@ export default function ChatBot() {
             setIsOpen(!isOpen);
             setIsHovered(false);
           }}
-          className="w-14 h-14 bg-emerald-600 hover:bg-emerald-500 rounded-full shadow-[0_0_20px_rgba(5,150,105,0.4)] flex items-center justify-center text-white transition-colors border border-emerald-400/30 relative z-10"
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white transition-colors relative z-10"
+          style={{
+            backgroundColor: "var(--accent)",
+            boxShadow: "0 0 20px var(--accent-glow)",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}
         >
           {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
         </motion.button>

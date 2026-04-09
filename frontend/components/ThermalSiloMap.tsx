@@ -19,7 +19,7 @@ export const DEFAULT_ZONES: ThermalZone[] = [
   { label: "Bottom", temp: 35, heightFraction: 0.24 },
 ];
 
-// ─── Thermal theme resolver ───────────────────────────────────────────────────
+// ─── Thermal theme resolver (LIGHT MODE) ────────────────────────────────────────
 
 interface ThermalTheme {
   bg: string;
@@ -31,31 +31,31 @@ interface ThermalTheme {
 
 function tempTheme(t: number): ThermalTheme {
   if (t <= 23) return {
-    bg:        "rgba(29,78,216,0.55)",
-    glowColor: "rgba(59,130,246,0.50)",
-    border:    "rgba(96,165,250,0.45)",
-    textColor: "#93c5fd",
+    bg:        "rgba(59,130,246,0.30)",
+    glowColor: "rgba(59,130,246,0.35)",
+    border:    "rgba(96,165,250,0.35)",
+    textColor: "#2563eb",
     label:     "Safe",
   };
   if (t <= 27) return {
-    bg:        "rgba(6,95,70,0.55)",
-    glowColor: "rgba(16,185,129,0.45)",
-    border:    "rgba(52,211,153,0.45)",
-    textColor: "#6ee7b7",
+    bg:        "rgba(64,224,208,0.22)",
+    glowColor: "rgba(64,224,208,0.30)",
+    border:    "rgba(64,224,208,0.35)",
+    textColor: "#0d9488",
     label:     "Normal",
   };
   if (t <= 32) return {
-    bg:        "rgba(146,64,14,0.62)",
-    glowColor: "rgba(245,158,11,0.50)",
-    border:    "rgba(251,191,36,0.45)",
-    textColor: "#fcd34d",
+    bg:        "rgba(205,127,50,0.18)",
+    glowColor: "rgba(205,127,50,0.30)",
+    border:    "rgba(205,127,50,0.35)",
+    textColor: "#b45309",
     label:     "Caution",
   };
   return {
-    bg:        "rgba(153,27,27,0.68)",
-    glowColor: "rgba(239,68,68,0.55)",
-    border:    "rgba(248,113,113,0.50)",
-    textColor: "#fca5a5",
+    bg:        "rgba(225,29,72,0.15)",
+    glowColor: "rgba(225,29,72,0.30)",
+    border:    "rgba(225,29,72,0.35)",
+    textColor: "#be123c",
     label:     "Critical",
   };
 }
@@ -86,21 +86,22 @@ export default function ThermalSiloMap({
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-outfit font-semibold text-[10px] tracking-[0.2em] text-slate-600 uppercase">
+          <p className="font-outfit font-semibold text-[10px] tracking-[0.2em] uppercase" style={{ color: "var(--text-secondary)" }}>
             {title}
           </p>
-          <p className="font-plus-jakarta text-slate-500 text-[11px] mt-0.5">
+          <p className="font-plus-jakarta text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
             Live thermal zone distribution
           </p>
         </div>
         {/* Pulsing "live" indicator */}
         <div className="flex items-center gap-1.5">
           <motion.span
-            className="size-1.5 rounded-full bg-emerald-400"
+            className="size-1.5 rounded-full"
+            style={{ backgroundColor: "var(--accent)" }}
             animate={{ opacity: [1, 0.3, 1], scale: [1, 0.8, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           />
-          <span className="font-outfit text-[9px] text-emerald-500 tracking-wider uppercase">Live</span>
+          <span className="font-outfit text-[9px] tracking-wider uppercase" style={{ color: "var(--accent)" }}>Live</span>
         </div>
       </div>
 
@@ -116,12 +117,12 @@ export default function ThermalSiloMap({
               width:        SILO_W,
               height:       CAP_H,
               borderRadius: "50%",
-              background:   `linear-gradient(to bottom, ${topTheme.bg}, rgba(15,23,42,0.9))`,
+              background:   `linear-gradient(to bottom, ${topTheme.bg}, rgba(255,255,255,0.95))`,
               border:       `1.5px solid ${topTheme.border}`,
               boxShadow:    `0 -4px 18px ${topTheme.glowColor}`,
               zIndex:       2,
               position:     "relative",
-              marginBottom: -1, // overlap slightly with the body
+              marginBottom: -1,
             }}
           />
 
@@ -132,8 +133,8 @@ export default function ThermalSiloMap({
               height:   BODY_H,
               position: "relative",
               overflow: "hidden",
-              borderLeft:  `1.5px solid rgba(148,163,184,0.18)`,
-              borderRight: `1.5px solid rgba(148,163,184,0.18)`,
+              borderLeft:  `1.5px solid var(--border-muted)`,
+              borderRight: `1.5px solid var(--border-muted)`,
             }}
           >
             {/* ── Thermal zones ── */}
@@ -146,7 +147,7 @@ export default function ThermalSiloMap({
                   style={{
                     height:     zoneH,
                     background: theme.bg,
-                    borderTop:  i === 0 ? "none" : `1px solid rgba(148,163,184,0.08)`,
+                    borderTop:  i === 0 ? "none" : `1px solid var(--border-muted)`,
                     position:   "relative",
                     overflow:   "hidden",
                   }}
@@ -259,7 +260,7 @@ export default function ThermalSiloMap({
               width:        SILO_W,
               height:       CAP_H,
               borderRadius: "50%",
-              background:   `linear-gradient(to top, ${bottomTheme.bg}, rgba(15,23,42,0.9))`,
+              background:   `linear-gradient(to top, ${bottomTheme.bg}, rgba(255,255,255,0.95))`,
               border:       `1.5px solid ${bottomTheme.border}`,
               boxShadow:    `0 4px 18px ${bottomTheme.glowColor}`,
               zIndex:       2,
@@ -274,7 +275,7 @@ export default function ThermalSiloMap({
               width:        SILO_W * 0.75,
               height:       6,
               borderRadius: "50%",
-              background:   "rgba(0,0,0,0.5)",
+              background:   "rgba(0,0,0,0.06)",
               filter:       "blur(4px)",
               marginTop:    4,
             }}
@@ -306,28 +307,28 @@ export default function ThermalSiloMap({
                     style={{ color: theme.textColor }}
                   >
                     {zone.temp}°C
-                    <span className="font-normal text-slate-600 ml-1">· {theme.label}</span>
+                    <span className="font-normal ml-1" style={{ color: "var(--text-muted)" }}>· {theme.label}</span>
                   </p>
-                  <p className="font-plus-jakarta text-slate-600 text-[9px] mt-0.5 leading-none">{zone.label}</p>
+                  <p className="font-plus-jakarta text-[9px] mt-0.5 leading-none" style={{ color: "var(--text-secondary)" }}>{zone.label}</p>
                 </div>
               </div>
             );
           })}
 
           {/* Divider */}
-          <div className="h-px bg-white/5 my-1" />
+          <div className="h-px my-1" style={{ backgroundColor: "var(--border-muted)" }} />
 
           {/* Scale reference */}
           <div className="flex flex-col gap-1">
             {[
-              { range: "≤ 23°C", label: "Safe",     color: "#93c5fd" },
-              { range: "24-27°C",label: "Normal",   color: "#6ee7b7" },
-              { range: "28-32°C",label: "Caution",  color: "#fcd34d" },
-              { range: "> 32°C", label: "Critical", color: "#fca5a5" },
+              { range: "≤ 23°C", label: "Safe",     color: "#2563eb" },
+              { range: "24-27°C",label: "Normal",   color: "#0d9488" },
+              { range: "28-32°C",label: "Caution",  color: "#b45309" },
+              { range: "> 32°C", label: "Critical", color: "#be123c" },
             ].map(({ range, label, color }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <span className="font-outfit text-[9px]" style={{ color }}>{range}</span>
-                <span className="font-plus-jakarta text-slate-700 text-[9px]">→ {label}</span>
+                <span className="font-plus-jakarta text-[9px]" style={{ color: "var(--text-secondary)" }}>→ {label}</span>
               </div>
             ))}
           </div>

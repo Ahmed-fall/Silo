@@ -1,5 +1,34 @@
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   SILO — Premium Government Modern Chic
+   Clean White & Turquoise · Light Mode · Apple-style Minimalism
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Design Tokens ────────────────────────────────────────────────────────── */
+:root {
+  --bg-base:        #F8FAFC;
+  --bg-surface:     rgba(255, 255, 255, 0.75);
+  --bg-elevated:    rgba(255, 255, 255, 0.95);
+
+  --accent:         #40E0D0;
+  --accent-glow:    rgba(64, 224, 208, 0.35);
+  --accent-subtle:  rgba(64, 224, 208, 0.08);
+
+  --alert:          #E11D48;
+  --alert-glow:     rgba(225, 29, 72, 0.30);
+
+  --warning:        #CD7F32;
+  --warning-glow:   rgba(205, 127, 50, 0.30);
+
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  --border-glass:   rgba(64, 224, 208, 0.30);
+  --border-muted:   rgba(15, 23, 42, 0.08);
+}
+
 /* ── Font CSS variables (set by Next.js next/font) ───────────────────────── */
 @theme inline {
   --font-outfit: var(--font-outfit);
@@ -14,22 +43,16 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-/* ── Dark Mesh Gradient background ──────────────────────────────────────── */
+/* ── Clean Airy Background ──────────────────────────────────────────────── */
 body {
   font-family: var(--font-plus-jakarta, system-ui, sans-serif);
-  color: #e2e8f0;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  background-color: #020617;
-  background-image:
-    radial-gradient(ellipse 80% 60% at 15% 10%, rgba(6, 78, 59, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 85% 20%, rgba(30, 27, 75, 0.18) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 70% at 50% 100%, rgba(15, 23, 42, 0.9) 0%, transparent 65%),
-    radial-gradient(ellipse 100% 80% at 50% 50%, rgba(2, 6, 23, 0.4) 0%, transparent 100%);
 }
 
 /* ── Typography helpers ──────────────────────────────────────────────────── */
@@ -41,46 +64,61 @@ body {
   font-family: var(--font-plus-jakarta, system-ui, sans-serif);
 }
 
-/* ── Ultra-thin border utility ───────────────────────────────────────────── */
-.border-glow-emerald {
-  border-color: rgba(52, 211, 153, 0.25);
+/* ── Tactical Glass ─────────────────────────────────────────────────────── */
+/* The signature panel style: frosted white with ultra-thin Turquoise border */
+.glass-tactical {
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--border-glass);
+  box-shadow:
+    0 0 1px rgba(64, 224, 208, 0.08) inset,
+    0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
-.border-glow-rose {
-  border-color: rgba(244, 63, 94, 0.25);
-}
-
-/* ── Glassmorphism card ──────────────────────────────────────────────────── */
+/* Legacy .glass alias — maps to tactical glass */
 .glass {
-  background: rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
-/* ── Floating shadow (spatial UI) ───────────────────────────────────────── */
+/* ── Border glow utilities ──────────────────────────────────────────────── */
+.border-glow-accent {
+  border-color: var(--border-glass);
+}
+
+.border-glow-alert {
+  border-color: rgba(225, 29, 72, 0.25);
+}
+
+.border-glow-warning {
+  border-color: rgba(205, 127, 50, 0.25);
+}
+
+/* ── Floating shadow (subtle, airy) ─────────────────────────────────────── */
 .shadow-float {
   box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.50),
-    0 16px 60px rgba(0, 0, 0, 0.35),
-    0 0 1px rgba(255, 255, 255, 0.04) inset;
+    0 2px 12px rgba(0, 0, 0, 0.06),
+    0 8px 32px rgba(0, 0, 0, 0.04);
 }
 
 .shadow-float-lg {
   box-shadow:
-    0 8px 40px rgba(0, 0, 0, 0.65),
-    0 24px 80px rgba(0, 0, 0, 0.45),
-    0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 16px 48px rgba(0, 0, 0, 0.06);
 }
 
-/* ── Thin scrollbar ──────────────────────────────────────────────────────── */
+/* ── Thin scrollbar (light theme) ───────────────────────────────────────── */
 .scrollbar-thin {
   scrollbar-width: thin;
 }
 
 .scrollbar-track-transparent,
 .scrollbar-thumb-slate-800 {
-  scrollbar-color: #1e293b transparent;
+  scrollbar-color: rgba(64, 224, 208, 0.18) transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -88,25 +126,24 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: rgba(64, 224, 208, 0.22);
   border-radius: 9999px;
 }
 
-/* ── Glow utilities ──────────────────────────────────────────────────────── */
-/* ── Glow utilities ──────────────────────────────────────────────────────── */
-.glow-emerald {
-  box-shadow: 0 0 28px rgba(52, 211, 153, 0.30);
+/* ── Glow utilities (Turquoise / Bronze / Red only) ──────────────────────── */
+.glow-accent {
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
-.glow-rose {
-  box-shadow: 0 0 28px rgba(244, 63, 94, 0.40);
+.glow-alert {
+  box-shadow: 0 0 20px var(--alert-glow);
 }
 
-.glow-amber {
-  box-shadow: 0 0 28px rgba(251, 191, 36, 0.35);
+.glow-warning {
+  box-shadow: 0 0 20px var(--warning-glow);
 }
 
-/* ── Custom scrollbar for chat window ──────────────────────────────────────── */
+/* ── Custom scrollbar for chat window ─────────────────────────────────── */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -116,12 +153,12 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgba(64, 224, 208, 0.20);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: rgba(64, 224, 208, 0.35);
 }
 
 .custom-scrollbar-hide {
@@ -195,23 +232,27 @@ body {
     margin-top: 12pt;
   }
 
+  /* Hide chrome UI */
   aside,
   header,
   [data-print-hide="true"],
-  .no-print {
+  .no-print,
+  [class*="fixed"],
+  [class*="absolute"] {
     display: none !important;
   }
 
+  /* Unwrap flex layout */
   body > div,
-  body > * > div,
-  .overflow-hidden,
-  .overflow-y-auto,
+  body > div > div,
   .flex-1 {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
+    flex: none !important;
   }
 
   main {
@@ -222,13 +263,23 @@ body {
     width: 100% !important;
   }
 
-  main > * {
-    max-width: 100% !important;
+  main > div,
+  main > div > div {
+    display: block !important;
     width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
   }
 
+  /* Page content wrapper */
+  .min-h-full,
+  .max-w-6xl {
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  /* Disable all animations */
   * {
     animation: none !important;
     transition: none !important;
@@ -236,51 +287,58 @@ body {
     will-change: auto !important;
   }
 
-  [class*="bg-slate-9"],
-  [class*="bg-slate-8"],
-  [class*="bg-slate-95"],
-  .glass {
-    background: #f8fafc !important;
+  /* Flatten glass panels */
+  .glass,
+  .glass-tactical {
+    background: #ffffff !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     box-shadow: none !important;
     border-color: #e2e8f0 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
   }
 
-  h1, h2, h3, h4, h5, h6,
-  [class*="text-white"],
-  [class*="text-slate-1"],
-  [class*="text-slate-2"],
-  [class*="text-slate-3"] {
+  /* Ensure text is dark and readable */
+  h1, h2, h3, h4, h5, h6 {
     color: #0f172a !important;
+    page-break-after: avoid;
   }
 
-  [class*="text-slate-4"],
-  [class*="text-slate-5"],
-  [class*="text-slate-6"],
-  [class*="text-slate-7"] {
-    color: #475569 !important;
+  p, span, div, li, td, th {
+    color: inherit !important;
   }
 
+  /* Force dark text on light backgrounds */
+  [class*="text-white"],
+  [class*="text-slate-"],
   [class*="text-emerald"],
-  [class*="text-rose"],
   [class*="text-amber"],
-  [class*="text-cyan"],
-  [class*="text-fuchsia"],
-  [class*="text-violet"] {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  [class*="text-rose"] {
+    color: inherit !important;
   }
 
-  [class*="grid-cols-5"],
+  /* Grids: collapse to fewer columns for print */
+  [class*="grid-cols-2"],
+  [class*="grid-cols-3"],
+  [class*="grid-cols-4"],
+  [class*="sm:grid-cols-2"],
+  [class*="sm:grid-cols-3"],
+  [class*="sm:grid-cols-4"],
   [class*="sm:grid-cols-5"] {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 
   [class*="lg:grid-cols-2"] {
     grid-template-columns: 1fr !important;
   }
 
+  /* Sensor / metric cards */
+  .col-span-2 {
+    grid-column: span 2 / span 2 !important;
+  }
+
+  /* SVG elements (thermal map, charts) */
   svg text {
     fill: #475569 !important;
   }
@@ -289,11 +347,13 @@ body {
     stroke: #e2e8f0 !important;
   }
 
-  .recharts-line-curve {
+  .recharts-line-curve,
+  .recharts-line-dot {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
+  /* Prevent page breaks inside sections */
   [data-print-section="break-before"] {
     page-break-before: always;
     break-before: page;
@@ -309,14 +369,35 @@ body {
     break-inside: avoid;
   }
 
-  .h-full, .min-h-full, .h-screen {
+  /* Height resets */
+  .h-full, .min-h-full, .h-screen, .h-56 {
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
   }
 
+  /* Links */
   a {
     text-decoration: none !important;
     color: inherit !important;
+  }
+
+  /* Scrollable containers */
+  .overflow-y-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Badges and status pills */
+  [class*="rounded-full"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Alert items */
+  li {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
