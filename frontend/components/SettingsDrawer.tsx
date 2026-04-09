@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Bell, Activity, Shield, Zap, LayoutGrid, ChevronRight, RefreshCw,
+  Sun, Moon,
 } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 
@@ -77,12 +78,15 @@ function SettingRow({ icon, label, description, on, onToggle, color = "accent" }
 
 export default function SettingsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const {
+    theme,             toggleTheme,
     compactMode,       toggleCompactMode,
     alertsMuted,       toggleAlertsMuted,
     diagnosticsEnabled,  toggleDiagnostics,
     animationsEnabled, toggleAnimations,
     autoRefresh,       toggleAutoRefresh,
   } = useSettings();
+
+  const isDark = theme === "dark";
 
   return (
     <AnimatePresence>
@@ -130,6 +134,42 @@ export default function SettingsDrawer({ open, onClose }: { open: boolean; onClo
               <p className="px-2 pt-2 pb-2 text-[9px] font-semibold tracking-[0.2em] uppercase" style={{ color: "var(--text-muted)" }}>
                 Appearance
               </p>
+
+              {/* Dark / Light Mode */}
+              <motion.div whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                onClick={toggleTheme}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer glass-tactical"
+              >
+                <div className="flex items-center justify-center size-8 rounded-xl shrink-0 border transition-colors"
+                  style={{
+                    backgroundColor: "var(--accent-subtle)",
+                    borderColor: "var(--border-glass)",
+                    color: isDark ? "#818cf8" : "var(--accent)",
+                  }}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div key={isDark ? "moon" : "sun"}
+                      initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                      exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      {isDark ? <Moon size={15} /> : <Sun size={15} />}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-outfit font-semibold text-sm transition-colors"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {isDark ? "Dark Mode" : "Light Mode"}
+                  </p>
+                  <p className="font-plus-jakarta text-[11px] mt-0.5 line-clamp-1" style={{ color: "var(--text-muted)" }}>
+                    {isDark ? "Click to switch to light" : "Click to switch to dark"}
+                  </p>
+                </div>
+                <Toggle on={isDark} onToggle={toggleTheme} color="warning" />
+              </motion.div>
 
               {/* 1. Compact Grid */}
               <SettingRow

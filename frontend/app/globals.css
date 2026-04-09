@@ -27,6 +27,40 @@
 
   --border-glass:   rgba(64, 224, 208, 0.30);
   --border-muted:   rgba(15, 23, 42, 0.08);
+
+  --map-grid:       linear-gradient(rgba(15,23,42,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.03) 1px, transparent 1px);
+  --map-fill:       #E2E8F0;
+  --map-stroke:     rgba(64, 224, 208, 0.40);
+}
+
+/* ── Dark Mode Overrides (Pure Black) ────────────────────────────────────── */
+/* Flips every CSS variable when .dark is on <html>. No component changes needed. */
+
+.dark {
+  --bg-base:        #000000;
+  --bg-surface:     rgba(8, 8, 8, 0.85);
+  --bg-elevated:    rgba(12, 12, 12, 0.95);
+
+  --accent:         #40E0D0;
+  --accent-glow:    rgba(64, 224, 208, 0.35);
+  --accent-subtle:  rgba(64, 224, 208, 0.10);
+
+  --alert:          #FB7185;
+  --alert-glow:     rgba(251,113,133, 0.35);
+
+  --warning:        #FBBF24;
+  --warning-glow:   rgba(251,191,36, 0.35);
+
+  --text-primary:   #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted:     #475569;
+
+  --border-glass:   rgba(64, 224, 208, 0.25);
+  --border-muted:   rgba(148, 163, 184, 0.10);
+
+  --map-grid:       linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  --map-fill:       #1E293B;
+  --map-stroke:     rgba(64, 224, 208, 0.30);
 }
 
 /* ── Font CSS variables (set by Next.js next/font) ───────────────────────── */

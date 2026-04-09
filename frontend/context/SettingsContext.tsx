@@ -6,7 +6,14 @@ import React, {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type Theme = "light" | "dark";
+
 interface SettingsState {
+  /** light | dark colour scheme */
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+  toggleTheme: () => void;
+
   /** Shrinks silo grid gaps in real-time */
   compactMode: boolean;
   setCompactMode: (v: boolean) => void;
@@ -34,6 +41,9 @@ interface SettingsState {
 }
 
 const defaultState: SettingsState = {
+  theme:             "light",
+  setTheme:          () => {},
+  toggleTheme:       () => {},
   compactMode:       false,
   setCompactMode:    () => {},
   toggleCompactMode: () => {},
@@ -75,6 +85,7 @@ function writeStorage(key: string, value: unknown) {
 }
 
 const STORAGE_KEYS = {
+  theme:     "silo:theme",
   compact:   "silo:compact",
   muted:     "silo:muted",
   diag:      "silo:diagnostics",
@@ -86,20 +97,47 @@ const STORAGE_KEYS = {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // All state initialises to SSR-safe defaults, then syncs from localStorage
+  const [theme,               setThemeState]        = useState<Theme>("light");
   const [compactMode,       setCompactMode]       = useState(false);
   const [alertsMuted,       setAlertsMuted]       = useState(false);
   const [diagnosticsEnabled,  setDiagnosticsEnabled]  = useState(false);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [autoRefresh,       setAutoRefresh]       = useState(false);
 
+  // Apply the theme class to <html>
+  const applyTheme = useCallback((t: Theme) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", t === "dark");
+      document.documentElement.style.colorScheme = t;
+    }
+  }, []);
+
   // Run only on the client — avoids SSR/client mismatch
   useEffect(() => {
+    const t = readStorage<Theme>(STORAGE_KEYS.theme, "light");
+    setThemeState(t);
+    applyTheme(t);
     setCompactMode(      readStorage<boolean>(STORAGE_KEYS.compact,  false));
     setAlertsMuted(      readStorage<boolean>(STORAGE_KEYS.muted,    false));
     setDiagnosticsEnabled(readStorage<boolean>(STORAGE_KEYS.diag,     false));
     setAnimationsEnabled(readStorage<boolean>(STORAGE_KEYS.anims,     true));
     setAutoRefresh(      readStorage<boolean>(STORAGE_KEYS.refresh,   false));
-  }, []);
+  }, [applyTheme]);
+
+  const setTheme = useCallback((t: Theme) => {
+    setThemeState(t);
+    writeStorage(STORAGE_KEYS.theme, t);
+    applyTheme(t);
+  }, [applyTheme]);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const next: Theme = prev === "light" ? "dark" : "light";
+      writeStorage(STORAGE_KEYS.theme, next);
+      applyTheme(next);
+      return next;
+    });
+  }, [applyTheme]);
 
   const toggleCompactMode = useCallback(() => {
     setCompactMode((prev) => { writeStorage(STORAGE_KEYS.compact, !prev); return !prev; });
@@ -123,6 +161,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SettingsContext.Provider value={{
+      theme,               setTheme,               toggleTheme,
       compactMode,       setCompactMode,       toggleCompactMode,
       alertsMuted,       setAlertsMuted,       toggleAlertsMuted,
       diagnosticsEnabled,  setDiagnosticsEnabled,  toggleDiagnostics,
