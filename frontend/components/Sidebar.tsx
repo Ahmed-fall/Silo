@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
-import { LayoutDashboard, Wheat, Map, BarChart2, Settings, Sparkles, X } from "lucide-react";
+import { LayoutDashboard, Map, BarChart2, Settings, Sparkles, X } from "lucide-react";
 import SettingsDrawer from "@/components/SettingsDrawer";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const NAV = [
   {
@@ -76,13 +77,13 @@ export default function Sidebar() {
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 pt-7 pb-6">
           <div
-            className="flex items-center justify-center size-9 rounded-xl shrink-0"
+            className="flex items-center justify-center size-9 rounded-xl shrink-0 overflow-hidden"
             style={{
               backgroundColor: "var(--accent)",
               boxShadow: "0 0 20px var(--accent-glow)",
             }}
           >
-            <Wheat size={17} className="text-white" />
+            <BrandLogo className="size-6 text-white" />
           </div>
           <div>
             <p className="font-outfit font-bold text-[17px] tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>Silo</p>

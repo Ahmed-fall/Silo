@@ -1,14 +1,18 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Bell, Activity, Shield, Zap, LayoutGrid, ChevronRight } from "lucide-react";
+import {
+  X, Bell, Activity, Shield, Zap, LayoutGrid, ChevronRight, RefreshCw,
+} from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
 
 // ─── Animated Toggle Switch ───────────────────────────────────────────────────
 
 type Accent = "accent" | "alert" | "warning";
 
-function Toggle({ on, onToggle, color = "accent" }: { on: boolean; onToggle: () => void; color?: Accent }) {
+function Toggle({ on, onToggle, color = "accent" }: {
+  on: boolean; onToggle: () => void; color?: Accent;
+}) {
   const tracks: Record<Accent, string> = {
     accent: "var(--accent)", alert: "var(--alert)", warning: "var(--warning)",
   };
@@ -72,7 +76,13 @@ function SettingRow({ icon, label, description, on, onToggle, color = "accent" }
 // ─── Drawer ───────────────────────────────────────────────────────────────────
 
 export default function SettingsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { compactMode, toggleCompactMode, alertsMuted, toggleAlertsMuted } = useSettings();
+  const {
+    compactMode,       toggleCompactMode,
+    alertsMuted,       toggleAlertsMuted,
+    diagnosticsEnabled,  toggleDiagnostics,
+    animationsEnabled, toggleAnimations,
+    autoRefresh,       toggleAutoRefresh,
+  } = useSettings();
 
   return (
     <AnimatePresence>
@@ -116,12 +126,12 @@ export default function SettingsDrawer({ open, onClose }: { open: boolean; onClo
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
-              {/* System Controls */}
+              {/* Appearance */}
               <p className="px-2 pt-2 pb-2 text-[9px] font-semibold tracking-[0.2em] uppercase" style={{ color: "var(--text-muted)" }}>
-                System Controls
+                Appearance
               </p>
 
-              {/* Compact Grid — FUNCTIONAL */}
+              {/* 1. Compact Grid */}
               <SettingRow
                 icon={<LayoutGrid size={15} />}
                 label="Compact Grid"
@@ -129,26 +139,41 @@ export default function SettingsDrawer({ open, onClose }: { open: boolean; onClo
                 on={compactMode} onToggle={toggleCompactMode} color="accent"
               />
 
-              {/* Mute Alerts — FUNCTIONAL */}
+              {/* 2. Mute All Alerts */}
               <SettingRow
                 icon={<Bell size={15} />}
                 label="Mute All Alerts"
-                description="Greys out alerts badge & highlights."
+                description="Greys out badges & disables pulse animations."
                 on={alertsMuted} onToggle={toggleAlertsMuted} color="alert"
               />
 
-              {/* Visual-only toggles (placeholder) */}
-              <SettingRow icon={<Activity size={15} />} label="System Diagnostics"
-                description="Show performance metrics in topbar."
-                on={false} onToggle={() => {}} color="accent"
+              {/* Performance */}
+              <p className="px-2 pt-5 pb-2 text-[9px] font-semibold tracking-[0.2em] uppercase" style={{ color: "var(--text-muted)" }}>
+                Performance & Data
+              </p>
+
+              {/* 3. System Diagnostics */}
+              <SettingRow
+                icon={<Activity size={15} />}
+                label="System Diagnostics"
+                description="Show ping, FPS & data sync in topbar."
+                on={diagnosticsEnabled} onToggle={toggleDiagnostics} color="accent"
               />
-              <SettingRow icon={<Zap size={15} />} label="Background Animations"
-                description="Gradient mesh & glow animations."
-                on={true} onToggle={() => {}} color="accent"
+
+              {/* 4. Background Animations */}
+              <SettingRow
+                icon={<Zap size={15} />}
+                label="Background Animations"
+                description="Pulse rings, glow effects & spinning borders."
+                on={animationsEnabled} onToggle={toggleAnimations} color="accent"
               />
-              <SettingRow icon={<Shield size={15} />} label="Auto-Refresh Data"
-                description="Refetch silo list every 60 seconds."
-                on={false} onToggle={() => {}} color="warning"
+
+              {/* 5. Auto-Refresh Data */}
+              <SettingRow
+                icon={<RefreshCw size={15} />}
+                label="Auto-Refresh Data"
+                description="Refetch silo data every 60 seconds."
+                on={autoRefresh} onToggle={toggleAutoRefresh} color="warning"
               />
             </div>
 

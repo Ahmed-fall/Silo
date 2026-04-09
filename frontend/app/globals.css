@@ -232,23 +232,27 @@ body {
     margin-top: 12pt;
   }
 
+  /* Hide chrome UI */
   aside,
   header,
   [data-print-hide="true"],
-  .no-print {
+  .no-print,
+  [class*="fixed"],
+  [class*="absolute"] {
     display: none !important;
   }
 
+  /* Unwrap flex layout */
   body > div,
-  body > * > div,
-  .overflow-hidden,
-  .overflow-y-auto,
+  body > div > div,
   .flex-1 {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
+    flex: none !important;
   }
 
   main {
@@ -259,13 +263,23 @@ body {
     width: 100% !important;
   }
 
-  main > * {
-    max-width: 100% !important;
+  main > div,
+  main > div > div {
+    display: block !important;
     width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
   }
 
+  /* Page content wrapper */
+  .min-h-full,
+  .max-w-6xl {
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  /* Disable all animations */
   * {
     animation: none !important;
     transition: none !important;
@@ -273,6 +287,7 @@ body {
     will-change: auto !important;
   }
 
+  /* Flatten glass panels */
   .glass,
   .glass-tactical {
     background: #ffffff !important;
@@ -280,21 +295,50 @@ body {
     -webkit-backdrop-filter: none !important;
     box-shadow: none !important;
     border-color: #e2e8f0 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
   }
 
+  /* Ensure text is dark and readable */
   h1, h2, h3, h4, h5, h6 {
     color: #0f172a !important;
+    page-break-after: avoid;
   }
 
-  [class*="grid-cols-5"],
+  p, span, div, li, td, th {
+    color: inherit !important;
+  }
+
+  /* Force dark text on light backgrounds */
+  [class*="text-white"],
+  [class*="text-slate-"],
+  [class*="text-emerald"],
+  [class*="text-amber"],
+  [class*="text-rose"] {
+    color: inherit !important;
+  }
+
+  /* Grids: collapse to fewer columns for print */
+  [class*="grid-cols-2"],
+  [class*="grid-cols-3"],
+  [class*="grid-cols-4"],
+  [class*="sm:grid-cols-2"],
+  [class*="sm:grid-cols-3"],
+  [class*="sm:grid-cols-4"],
   [class*="sm:grid-cols-5"] {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 
   [class*="lg:grid-cols-2"] {
     grid-template-columns: 1fr !important;
   }
 
+  /* Sensor / metric cards */
+  .col-span-2 {
+    grid-column: span 2 / span 2 !important;
+  }
+
+  /* SVG elements (thermal map, charts) */
   svg text {
     fill: #475569 !important;
   }
@@ -303,11 +347,13 @@ body {
     stroke: #e2e8f0 !important;
   }
 
-  .recharts-line-curve {
+  .recharts-line-curve,
+  .recharts-line-dot {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
+  /* Prevent page breaks inside sections */
   [data-print-section="break-before"] {
     page-break-before: always;
     break-before: page;
@@ -323,14 +369,35 @@ body {
     break-inside: avoid;
   }
 
-  .h-full, .min-h-full, .h-screen {
+  /* Height resets */
+  .h-full, .min-h-full, .h-screen, .h-56 {
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
   }
 
+  /* Links */
   a {
     text-decoration: none !important;
     color: inherit !important;
+  }
+
+  /* Scrollable containers */
+  .overflow-y-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Badges and status pills */
+  [class*="rounded-full"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Alert items */
+  li {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
