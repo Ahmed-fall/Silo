@@ -8,7 +8,7 @@ import os
 app = FastAPI(title="Silo AI Vision Service")
 
 # ── Model Loading ──────────────────────────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "Final_model.keras")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "weights", "final_model.keras")
 CLASS_NAMES = [
     "Aphid", "Black Rust", "Blast", "Brown Rust",
     "Fusarium Head Blight", "Healthy Wheat", "Leaf Blight",

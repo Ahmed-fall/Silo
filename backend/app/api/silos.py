@@ -12,13 +12,15 @@ async def create_silo(silo: SiloCreate):
     db = await get_db()
     row = await db.fetchrow(
         """
-        INSERT INTO silos (name, location, capacity_kg)
-        VALUES ($1, $2, $3)
+        INSERT INTO silos (name, location, capacity_kg, risk_level, crop_type)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING *
         """,
         silo.name,
         silo.location,
         silo.capacity_kg,
+        silo.risk_level,
+        silo.crop_type,
     )
     return dict(row)
 

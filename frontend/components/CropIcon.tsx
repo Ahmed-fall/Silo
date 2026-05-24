@@ -7,9 +7,11 @@ export type CropType =
   | "wheat"
   | "rice"
   | "corn"
+  | "maize"
   | "barley"
   | "sorghum"
   | "soybean"
+  | "soy"
   | "default";
 
 interface IconProps {

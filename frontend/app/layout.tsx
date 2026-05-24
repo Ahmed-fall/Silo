@@ -22,27 +22,29 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    /*
-     * suppressHydrationWarning stops React from throwing when a browser extension
-     * (or the theme class) modifies <html> attributes before hydration completes.
-     */
     <html lang="en" suppressHydrationWarning
-      className={`${outfit.variable} ${plusJakarta.variable} h-full antialiased dark`}
+      className={`${outfit.variable} ${plusJakarta.variable} h-full antialiased`}
     >
-      <body className="h-full flex overflow-hidden bg-slate-950 text-slate-200">
+      <body
+        className="h-full flex overflow-hidden"
+        style={{ backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}
+      >
         <SettingsProvider>
           <AlertProvider>
             <Sidebar />
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <header className="
-                shrink-0 flex items-center justify-between
-                px-4 lg:px-6 py-3
-                border-b border-white/5
-                bg-slate-950/60 backdrop-blur-xl
-              ">
+              <header
+                className="shrink-0 flex items-center justify-between px-4 lg:px-6 py-3"
+                style={{
+                  borderBottom: "1px solid var(--border-muted)",
+                  backgroundColor: "var(--bg-elevated)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                }}
+              >
                 {/* Mobile brand */}
                 <div className="flex items-center gap-2 lg:hidden">
-                  <span className="font-outfit font-bold text-white text-sm">Silo</span>
+                  <span className="font-outfit font-bold text-sm" style={{ color: "var(--text-primary)" }}>Silo</span>
                 </div>
                 <div className="hidden lg:block" />
                 <LiveAlertsPanel />

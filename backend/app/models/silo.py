@@ -7,6 +7,8 @@ class SiloCreate(BaseModel):
     name: str
     location: Optional[str] = None
     capacity_kg: Optional[float] = None
+    risk_level: Optional[str] = "none"
+    crop_type: Optional[str] = "wheat"
 
 
 class SiloResponse(BaseModel):
@@ -14,6 +16,8 @@ class SiloResponse(BaseModel):
     name: str
     location: Optional[str] = None
     capacity_kg: Optional[float] = None
+    risk_level: str
+    crop_type: str
     created_at: datetime
 
     class Config:
