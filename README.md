@@ -1,334 +1,368 @@
-# 🌾 Silo — AI-Powered Crop Health Platform
+# 🌾 Silo — Intelligent National Grain Preservation System
 
-Silo is a microservices-based platform that uses artificial intelligence to help farmers detect wheat diseases and assess crop health risk in real time.
-
----
-
-## 🖥️ Screenshots
-
-### Dashboard — Command Centre
-Real-time overview of all monitored grain silos with risk levels and sensor readings.
-
-![Silos Dashboard](screenshots/screenshot_dashboard.jpeg)
+An enterprise-grade, AI-powered platform that unifies live sensor telemetry, grain disease diagnostics, predictive risk scoring, geospatial monitoring, and a conversational AI agronomist into a single command center for Egyptian grain storage facilities.
 
 ---
 
-### Silo Detail View — Sensor History
-Per-silo view showing 24-hour temperature and humidity trends, with live sensor readings and recent alerts.
-
-![Silo Detail](screenshots/screenshot_silo_detail.jpeg)
-
----
-
-### AI Vision Scanner — Disease Detection
-Upload a grain photo directly from the silo detail page. The AI Vision service analyzes it and returns the detected disease with a confidence score.
-
-![AI Vision Scanner](screenshots/screenshot_ai_scanner.jpeg)
-
-> **Example result:** Wheat Rust Detected — 88.5% confidence
-
----
-
-## 📦 Project Structure
+## Architecture
 
 ```
-Silo/
-├── ai-vision/                  # Wheat disease detection service (Keras + FastAPI)
-│   ├── app/
-│   │   ├── main.py             # FastAPI application
-│   │   └── final_model.keras   # Trained Keras model (not tracked in git)
-│   ├── train.py                # YOLOv8 training script
-│   ├── requirements.txt        # Python dependencies
-│   └── Dockerfile              # Container definition
-│
-├── ai-predictive/              # Crop health risk prediction service (XGBoost + FastAPI)
-│   ├── app/
-│   │   ├── main.py             # FastAPI application
-│   │   └── model/
-│   │       ├── predict.py      # Inference logic
-│   │       └── crop_health_model_lr.pkl  # Trained model (not tracked in git)
-│   ├── PREPROCESSCING/
-│   │   ├── preprocess.ipynb    # Data preprocessing notebook
-│   │   ├── logical_agriculture_data.csv
-│   │   └── processed_agriculture_data.csv
-│   ├── requirements.txt
-│   └── Dockerfile
-│
-├── backend/                    # Main backend service
-├── frontend/                   # Frontend application
-├── scripts/                    # Utility scripts
-└── docker-compose.yml          # Orchestrates all microservices
+Browser (Next.js 16.2)
+    │
+    ├── REST (Axios)
+    ├── WebSocket (/ws/alerts)
+    └── POST /chat
+         │
+    FastAPI Backend (:8000)
+         │
+    ┌────┴──────────────────────┐
+    │                           │
+PostgreSQL              AI Vision (:8001)
+(silo_db)               TensorFlow/Keras
+                        14-class CNN
+                                │
+                        AI Predictive (:8002)
+                        XGBoost Classifier
+                                │
+                        Ollama LLM (:11434)
+                        llama3.1:8b
 ```
 
----
-
-## 🤖 Services Overview
-
-### 1. AI Vision Service (`ai-vision`)
-Detects wheat diseases from uploaded images using a Keras deep learning model.
-
-| Property | Details |
-|---|---|
-| Framework | TensorFlow / Keras |
-| Input | Wheat image (JPG/PNG) |
-| Output | Disease label + confidence score |
-| Port | `8001` |
-| Classes | `rust`, `blast`, `mildew`, `healthy` |
-
-### 2. AI Predictive Service (`ai-predictive`)
-Predicts crop health risk level based on environmental and soil sensor data.
-
-| Property | Details |
-|---|---|
-| Framework | Scikit-learn (Logistic Regression Pipeline) |
-| Input | Sensor readings (JSON) |
-| Output | Risk score + risk level |
-| Port | `8002` |
-| Classes | `low`, `medium`, `high` |
+All frontend requests route exclusively through the FastAPI backend. The frontend never communicates directly with the database, AI services, or Ollama.
 
 ---
 
-## 🚀 Getting Started
+## Services
 
-### Prerequisites
-- Python 3.11+
-- Docker Desktop
-- NVIDIA GPU (recommended for training)
-- CUDA 12.4+ (for GPU support)
+| Service | Port | Technology | Responsibility |
+|---|---|---|---|
+| Frontend | 3000 | Next.js 16.2, TypeScript, Tailwind CSS v4 | UI, WebSocket client, chat |
+| Backend | 8000 | FastAPI, asyncpg, Alembic, Pydantic v2 | API gateway, DB, WebSocket hub |
+| AI Vision | 8001 | TensorFlow 2.17, Keras | 14-class grain disease classification |
+| AI Predictive | 8002 | XGBoost, scikit-learn | Sensor-based risk scoring |
+| Database | 5432 | PostgreSQL 15+ | Persistent storage |
+| Ollama | 11434 | llama3.1:8b | Conversational AI agronomist |
 
-### 1. Clone the Repository
+---
+
+## Prerequisites
+
+- Python 3.11
+- Node.js v20+
+- PostgreSQL 15+
+- [Ollama](https://ollama.com/download)
+- conda / mamba (recommended)
+- Model files (see Model Files section below)
+
+---
+
+## Local Setup
+
+### 1. Clone the repository
+
 ```bash
 git clone https://github.com/Ahmed-fall/Silo.git
 cd Silo
 ```
 
-### 2. Add Model Files
-Since model files are not tracked in Git, place them manually:
+### 2. Create Python environment
 
-```
-ai-vision/app/final_model.keras
-ai-predictive/app/model/crop_health_model_lr.pkl
-```
-
-### 3. Install Dependencies (without Docker)
-
-**AI Vision:**
 ```bash
-cd ai-vision
-pip install -r requirements.txt
+mamba create -n silo python=3.11 -y
+mamba activate silo
 ```
 
-**AI Predictive:**
+### 3. Install Python dependencies
+
 ```bash
-cd ai-predictive
-pip install -r requirements.txt
+pip install fastapi==0.111.0 uvicorn[standard]==0.29.0 asyncpg==0.29.0 \
+    pydantic==2.7.1 pydantic-settings==2.2.1 python-dotenv==1.0.1 \
+    httpx==0.27.0 python-multipart==0.0.9 alembic==1.13.1 \
+    psycopg2-binary==2.9.9 email-validator==2.3.0 \
+    tensorflow==2.17.0 keras==3.13.2 pillow==10.4.0 \
+    xgboost scikit-learn joblib numpy==1.26.4 requests websockets
+```
+
+### 4. Install Node.js dependencies
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+### 5. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values. Required variables:
+
+```env
+POSTGRES_USER=silo_user
+POSTGRES_PASSWORD=silo_pass
+POSTGRES_DB=silo_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+AI_VISION_URL=http://localhost:8001
+AI_PREDICTIVE_URL=http://localhost:8002
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1:8b
+UPLOADS_DIR=/absolute/path/to/Silo/uploads
+```
+
+### 6. Set up PostgreSQL
+
+```bash
+sudo -u postgres psql -c "CREATE USER silo_user WITH PASSWORD 'silo_pass';"
+sudo -u postgres psql -c "CREATE DATABASE silo_db OWNER silo_user;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE silo_db TO silo_user;"
+sudo -u postgres psql -d silo_db -c "GRANT ALL ON SCHEMA public TO silo_user;"
+```
+
+Run migrations:
+
+```bash
+cd backend
+alembic upgrade head
+cd ..
+```
+
+Verify tables exist:
+
+```bash
+psql -U silo_user -d silo_db -h localhost -c "\dt"
+```
+
+You should see: `alerts`, `images`, `sensor_readings`, `silos`.
+
+### 7. Set up Ollama
+
+```bash
+ollama serve &
+ollama pull llama3.1:8b
+```
+
+### 8. Place model files
+
+Model files are not tracked in Git. Place them manually:
+
+```
+ai-vision/app/Final_model.keras
+ai-predictive/app/model/weights/crop_health_model_xgb.pkl
+ai-predictive/app/model/weights/label_encoder.pkl
+```
+
+### 9. Seed the database
+
+```bash
+python scripts/seed_data.py
 ```
 
 ---
 
-## ▶️ Running the Services
+## Running the Project
 
-### Option A — Without Docker (Development)
+Open 5 terminals:
 
-**AI Vision Service:**
 ```bash
-cd ai-vision
-python -m uvicorn app.main:app --reload --port 8001
+# Terminal 1 — Backend
+cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --env-file ../.env
+
+# Terminal 2 — AI Vision
+cd ai-vision && uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+# Terminal 3 — AI Predictive
+cd ai-predictive && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+# Terminal 4 — Frontend
+cd frontend && npm run dev
+
+# Terminal 5 — Sensor Simulator (optional, for live demo)
+python scripts/simulate_sensor.py
 ```
 
-**AI Predictive Service:**
-```bash
-cd ai-predictive
-python -m uvicorn app.main:app --reload --port 8002
-```
+Open http://localhost:3000
 
-### Option B — With Docker
+---
 
-**Build and run AI Vision:**
-```bash
-cd ai-vision
-docker build -t ai-vision .
-docker run -p 8001:8001 ai-vision
-```
+## Verify All Services
 
-**Build and run AI Predictive:**
 ```bash
-cd ai-predictive
-docker build -t ai-predictive .
-docker run -p 8002:8002 ai-predictive
-```
-
-**Run all services together:**
-```bash
-docker-compose up --build
+curl http://localhost:8000/health   # {"status":"ok","service":"backend"}
+curl http://localhost:8001/health   # {"status":"ok","service":"ai-vision"}
+curl http://localhost:8002/health   # {"status":"ok","service":"ai-predictive"}
+curl http://localhost:11434/api/tags  # Ollama model list
 ```
 
 ---
 
-## 📡 API Reference
+## Docker (Full Stack)
 
-### AI Vision Service — `http://localhost:8001`
-
-#### `GET /health`
-Check if the service is running.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "service": "ai-vision"
-}
+```bash
+docker compose up --build
 ```
 
-#### `POST /analyze`
-Upload a wheat image to detect disease.
+> Ollama must still run on the host. The Docker setup connects via `host.docker.internal:11434`.
 
-**Request:** `multipart/form-data`
-| Field | Type | Description |
+---
+
+## API Reference
+
+Base URL: `http://localhost:8000`
+
+### Silos
+| Method | Endpoint | Description |
 |---|---|---|
-| `file` | image | Wheat image (JPG or PNG) |
+| GET | `/silos` | List all silos with latest sensor and risk data |
+| GET | `/silos/{id}` | Get single silo detail |
+| POST | `/silos` | Create a new silo |
 
-**Response (success):**
-```json
-{
-  "label": "rust",
-  "confidence": 0.9982,
-  "status": "ok"
-}
-```
-
-**Response (model unavailable):**
-```json
-{
-  "status": "unavailable"
-}
-```
-
-**Example using curl:**
-```bash
-curl -X POST http://localhost:8001/analyze \
-  -F "file=@wheat_image.jpg"
-```
-
----
-
-### AI Predictive Service — `http://localhost:8002`
-
-#### `GET /health`
-Check if the service is running.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "service": "ai-predictive"
-}
-```
-
-#### `POST /predict`
-Send sensor readings to get a crop health risk assessment.
-
-**Request:** `application/json`
-```json
-{
-  "temperature": 38.0,
-  "humidity": 75.0,
-  "soil_moisture": 25.0,
-  "ndvi": 0.3,
-  "pest_damage": 50.0,
-  "crop_stress_indicator": 60.0,
-  "soil_ph": 6.5,
-  "organic_matter": 2.0
-}
-```
-
-| Field | Type | Description |
+### Sensors
+| Method | Endpoint | Description |
 |---|---|---|
-| `temperature` | float | Air temperature (°C) |
-| `humidity` | float | Relative humidity (%) |
-| `soil_moisture` | float | Soil moisture level (%) |
-| `ndvi` | float | Vegetation index (0.0 – 1.0) |
-| `pest_damage` | float | Pest damage level (0–100) |
-| `crop_stress_indicator` | float | Stress indicator (0–100) |
-| `soil_ph` | float | Soil pH level (0–14) |
-| `organic_matter` | float | Organic matter content (%) |
+| POST | `/sensors/ingest` | Ingest reading → AI prediction → alert if high risk → WebSocket broadcast |
+| GET | `/sensors/{silo_id}` | Get sensor history for a silo |
+| GET | `/sensors/forecast/{silo_id}` | Get 12-hour AI forecast |
 
-**Response (success):**
-```json
-{
-  "risk_score": 85.0,
-  "risk_level": "high",
-  "status": "ok"
-}
+### Alerts
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/alerts/{silo_id}` | List alerts for a silo |
+| PATCH | `/alerts/{alert_id}/read` | Mark alert as read |
+
+### Images
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/images/upload?silo_id={id}` | Upload grain image → AI disease classification |
+| GET | `/images/{silo_id}` | Get image scan history |
+
+### Chat
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/chat` | Send message to AI agronomist (live DB context injected) |
+
+### WebSocket
+| Channel | URL | Description |
+|---|---|---|
+| Alerts | `ws://localhost:8000/ws/alerts` | Real-time alert push to all connected clients |
+
+### AI Vision Service (`http://localhost:8001`)
+```bash
+POST /analyze   # multipart/form-data, field: "file"
+GET  /health
 ```
 
-**Response (model unavailable):**
-```json
-{
-  "status": "unavailable"
-}
+### AI Predictive Service (`http://localhost:8002`)
+```bash
+POST /predict   # {"temperature": float, "humidity": float, "soil_moisture": float, "ndvi": float}
+GET  /health
 ```
 
-**Example using curl:**
+**Example:**
 ```bash
 curl -X POST http://localhost:8002/predict \
   -H "Content-Type: application/json" \
-  -d '{
-    "temperature": 38,
-    "humidity": 75,
-    "soil_moisture": 25,
-    "ndvi": 0.3,
-    "pest_damage": 50,
-    "crop_stress_indicator": 60,
-    "soil_ph": 6.5,
-    "organic_matter": 2.0
-  }'
+  -d '{"temperature": 42, "humidity": 85, "soil_moisture": 25, "ndvi": 0.2}'
+# {"risk_score": 75, "risk_level": "high", "status": "ok"}
 ```
 
 ---
 
-## 🧪 Testing the APIs (Swagger UI)
+## AI Models
 
-Both services come with built-in interactive API documentation:
-
-| Service | Swagger URL |
+### AI Vision — Grain Disease Classifier
+| Property | Detail |
 |---|---|
-| AI Vision | http://localhost:8001/docs |
-| AI Predictive | http://localhost:8002/docs |
+| Framework | TensorFlow 2.17 / Keras |
+| Input | 255×255 RGB image, normalized to [0,1] |
+| Validation Accuracy | 78.22% |
+| Classes (14) | Aphid, Black Rust, Blast, Brown Rust, Fusarium Head Blight, Healthy Wheat, Leaf Blight, Mildew, Mite, Septoria, Smut, Stem Fly, Tan Spot, Yellow Rust |
 
-Open in your browser, click **"Try it out"** on any endpoint, and test directly.
+### AI Predictive — Risk Scorer
+| Property | Detail |
+|---|---|
+| Framework | XGBoost + scikit-learn Pipeline |
+| Input | Temperature, Humidity, Soil Moisture, NDVI |
+| Test Accuracy | 89% (5-fold CV: 90.4%, std: 0.0047) |
+| Output | Critical → high (75), Stressed → medium (45), Healthy → low (15) |
+| Inference Latency | 60ms end-to-end |
+
+### AI Chatbot
+| Property | Detail |
+|---|---|
+| Engine | Ollama |
+| Default Model | llama3.1:8b |
+| Pattern | RAG-lite — live DB context injected per query |
 
 ---
 
-## 🏋️ Training the Model (Optional)
+## Project Structure
 
-To fine-tune the YOLOv8 model on the wheat disease dataset:
-
-```bash
-cd ai-vision
-python train.py
+```
+Silo/
+├── .env                        # Environment config (not in Git)
+├── .env.example                # Environment template
+├── docker-compose.yml
+├── backend/
+│   ├── app/
+│   │   ├── main.py             # FastAPI app, CORS, WebSocket, health
+│   │   ├── api/
+│   │   │   ├── silos.py
+│   │   │   ├── sensors.py      # Ingest pipeline + forecast
+│   │   │   ├── alerts.py
+│   │   │   ├── images.py
+│   │   │   └── chat.py         # Ollama + live DB context
+│   │   ├── core/
+│   │   │   ├── config.py       # Pydantic Settings
+│   │   │   └── database.py     # asyncpg pool
+│   │   ├── models/             # Pydantic schemas
+│   │   └── ws/alerts.py        # WebSocket ConnectionManager
+│   ├── migrations/             # Alembic migrations
+│   └── requirements.txt
+├── ai-vision/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── Final_model.keras   # Not in Git — place manually
+│   │   └── model/
+│   └── requirements.txt
+├── ai-predictive/
+│   ├── app/
+│   │   ├── main.py
+│   │   └── model/
+│   │       ├── predict.py
+│   │       └── weights/
+│   │           ├── crop_health_model_xgb.pkl   # Not in Git
+│   │           └── label_encoder.pkl           # Not in Git
+│   └── requirements.txt
+├── frontend/
+│   ├── app/
+│   │   ├── page.tsx            # Dashboard
+│   │   ├── live-map/           # Geospatial map
+│   │   └── silos/[id]/         # Silo diagnostics
+│   ├── components/
+│   ├── context/
+│   └── lib/api.ts
+└── scripts/
+    ├── seed_data.py            # Seeds 5 silos + 30 readings each
+    └── simulate_sensor.py      # Continuous sensor ingestion
 ```
 
-Requirements:
-- Kaggle dataset downloaded to `ai-vision/data/`
-- NVIDIA GPU with CUDA support
-- ~1-2 hours training time
+---
+
+## Known Limitations
+
+- No authentication — all endpoints are publicly accessible
+- No rate limiting on sensor ingestion or image upload
+- Chatbot responds in English only
+- Model files must be placed manually (not in Git due to size)
 
 ---
 
-## 🔒 Notes
+## Team
 
-- Model files (`*.keras`, `*.pkl`, `*.pt`) are **not tracked in Git** due to size
-- The `.gitignore` excludes `data/`, `*.keras`, `*.pt`, `*.h5`, `__pycache__/`
-- Always activate your virtual environment before running locally
-
----
-
-## 👥 Team
-
-| Service | Responsibility |
-|---|---|
-| `ai-vision` | Wheat disease detection |
-| `ai-predictive` | Crop health risk prediction |
-| `backend` | Main API and business logic |
-| `frontend` | User interface |
+Built by the Silo Engineering Team — Egypt-Japan University of Science and Technology.
+Supported by [nWeave](http://nweave.com).S

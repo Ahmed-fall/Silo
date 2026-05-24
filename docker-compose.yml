@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,21 +22,18 @@ services:
     restart: always
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+    env_file: .env
     environment:
-      # Override .env for Docker environment
-      # For Docker, Ollama runs on your WSL host, accessible via host.docker.internal
-      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
-    volumes:
-      - ./uploads:/app/uploads
+      POSTGRES_HOST: db
+      OLLAMA_URL: http://host.docker.internal:11434
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
   ai-vision:
     build: ./ai-vision
@@ -45,14 +42,14 @@ services:
       - "8001:8001"
     volumes:
       - ./uploads:/app/uploads
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
   ai-predictive:
     build: ./ai-predictive
     restart: always
     ports:
       - "8002:8002"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002
 
   frontend:
     build: ./frontend
@@ -60,7 +57,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - backend
 
