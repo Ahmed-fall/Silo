@@ -1,11 +1,7 @@
-python-multipart==0.0.9
-# Web Framework
-fastapi==0.115.0
-uvicorn==0.30.6
-
-# Deep Learning
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
 tensorflow==2.17.0
-
-# Image Processing
+keras==3.13.2
 pillow==10.4.0
 numpy==1.26.4
+python-multipart==0.0.9
