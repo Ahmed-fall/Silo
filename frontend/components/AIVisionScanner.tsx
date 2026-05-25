@@ -90,22 +90,22 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
   };
 
   return (
-    <div className="flex flex-col h-full p-6 backdrop-blur-xl bg-slate-900/40 border border-white/10 rounded-3xl shadow-2xl">
+    <div className="flex flex-col h-full p-6 glass-tactical rounded-2xl shadow-float">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold tracking-tight text-slate-100 font-outfit">
-          AI Vision Scanner
+        <h3 className="text-sm font-cinzel font-bold tracking-wider text-[var(--text-primary)]">
+          ARCHIVAL SCANNER
         </h3>
-        <Scan className="w-5 h-5 text-cyan-400" />
+        <Scan className="w-4 h-4 text-[var(--accent)]" />
       </div>
 
       {!preview ? (
         <div 
           onClick={() => fileInputRef.current?.click()}
-          className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-700/50 hover:border-cyan-500/50 rounded-2xl bg-slate-800/20 cursor-pointer transition-colors group p-8"
+          className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[rgba(164,130,89,0.22)] hover:border-[var(--accent)] rounded-2xl bg-[rgba(164,130,89,0.02)] hover:bg-[rgba(164,130,89,0.06)] cursor-pointer transition-all duration-300 group p-8"
         >
-          <UploadCloud className="w-12 h-12 text-slate-500 group-hover:text-cyan-400 transition-colors mb-4" />
-          <p className="text-sm text-slate-400 font-medium">Click or drag image to upload</p>
-          <p className="text-xs text-slate-500 mt-2">Supports JPG, PNG (Max 5MB)</p>
+          <UploadCloud className="w-12 h-12 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors mb-4" />
+          <p className="text-sm text-[var(--text-secondary)] font-medium font-outfit">Click or drag image to upload</p>
+          <p className="text-xs text-[var(--text-muted)] mt-2 font-plus-jakarta">Supports JPG, PNG (Max 5MB)</p>
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -116,9 +116,9 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
         </div>
       ) : (
         <div className="flex-1 flex flex-col space-y-4">
-          <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 flex-shrink-0">
+          <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-[rgba(164,130,89,0.04)] border border-[rgba(164,130,89,0.18)] flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="Crop Preview" className="object-cover w-full h-full opacity-80" />
+            <img src={preview} alt="Crop Preview" className="object-cover w-full h-full opacity-90" />
             
             {/* Scanning Laser Animation */}
             <AnimatePresence>
@@ -127,7 +127,7 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
                   initial={{ top: "0%" }}
                   animate={{ top: "100%" }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: "linear", repeatType: "reverse" }}
-                  className="absolute left-0 right-0 h-1 bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,1)] z-10"
+                  className="absolute left-0 right-0 h-0.5 bg-[var(--accent)] shadow-[0_0_12px_var(--accent)] z-10"
                 />
               )}
             </AnimatePresence>
@@ -136,7 +136,7 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
             {!isScanning && (
               <button 
                 onClick={clearSelection}
-                className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/80 backdrop-blur-md rounded-full text-white transition-colors"
+                className="absolute top-2 right-2 p-1.5 bg-[rgba(250,247,240,0.85)] hover:bg-[var(--bg-base)] border border-[rgba(164,130,89,0.22)] backdrop-blur-md rounded-full text-[var(--text-primary)] transition-colors shadow-sm cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -146,17 +146,23 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
           {/* Controls & Results */}
           <div className="flex-1 flex flex-col justify-end">
             {!result && !isScanning && (
-              <button 
+              <motion.button 
                 onClick={triggerScan}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                whileHover={{ scale: 1.02, boxShadow: "0 0 15px var(--accent-glow)" }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-3 rounded-xl text-white font-semibold font-outfit tracking-wide border transition-all cursor-pointer"
+                style={{
+                  background: "linear-gradient(135deg, var(--accent) 0%, #8D6B44 100%)",
+                  borderColor: "rgba(164, 130, 89, 0.4)",
+                }}
               >
                 Analyze Image
-              </button>
+              </motion.button>
             )}
 
             {isScanning && (
-              <div className="flex items-center justify-center py-3 text-cyan-400 font-medium animate-pulse">
-                Processing via Silo AI...
+              <div className="flex items-center justify-center py-3 text-[var(--accent)] font-medium font-outfit tracking-wide animate-pulse">
+                Archival Vision Analysis in Progress...
               </div>
             )}
 
@@ -165,24 +171,28 @@ export default function AIVisionScanner({ siloId }: AIVisionScannerProps) {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-xl bg-slate-950/50 border border-slate-800"
+                className="p-4 rounded-xl bg-[rgba(164,130,89,0.03)] border border-[rgba(164,130,89,0.18)]"
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center space-x-2">
-                    {result.isIssue ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-400" />}
-                    <span className={`font-semibold ${result.isIssue ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {result.isIssue ? (
+                      <AlertTriangle className="w-5 h-5 text-[var(--alert)]" />
+                    ) : (
+                      <CheckCircle className="w-5 h-5 text-[var(--accent)]" />
+                    )}
+                    <span className={`font-semibold font-outfit ${result.isIssue ? 'text-[var(--alert)]' : 'text-[var(--accent)]'}`}>
                       {result.label}
                     </span>
                   </div>
-                  <span className="text-slate-300 font-medium">{result.confidence.toFixed(1)}%</span>
+                  <span className="text-[var(--text-secondary)] font-medium font-outfit">{result.confidence.toFixed(1)}%</span>
                 </div>
                 {/* Confidence Progress Bar */}
-                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-[rgba(164,130,89,0.10)] rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${result.confidence}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className={`h-full ${result.isIssue ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]' : 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]'}`}
+                    className={`h-full ${result.isIssue ? 'bg-[var(--alert)] shadow-[0_0_10px_var(--alert-glow)]' : 'bg-[var(--accent)] shadow-[0_0_10px_var(--accent-glow)]'}`}
                   />
                 </div>
               </motion.div>
