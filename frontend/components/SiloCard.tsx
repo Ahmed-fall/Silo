@@ -178,22 +178,6 @@ export default function SiloCard({ silo }: { silo: Silo }) {
             className="relative h-full flex flex-col gap-0"
             style={{ backgroundColor: c.bg, borderRadius: "5px" }}
           >
-            {/* ── Vertical dossier classification strip ── */}
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "4px",
-                borderRadius: "5px 0 0 5px",
-                backgroundColor: c.stripColor,
-                opacity: 0.85,
-                animation: c.stripPulse
-                  ? "stripPulse 1.6s ease-in-out infinite alternate"
-                  : "none",
-              }}
-            />
             {/* ── Top meta strip ── */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div className="flex items-center gap-2.5">
