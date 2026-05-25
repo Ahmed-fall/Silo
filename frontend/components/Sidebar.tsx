@@ -4,27 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
-import { LayoutDashboard, Wheat, Map, BarChart2, Settings, Sparkles, X } from "lucide-react";
+import { LayoutDashboard, Map, BarChart2, Settings, X } from "lucide-react";
 import SettingsDrawer from "@/components/SettingsDrawer";
 
 const NAV = [
   {
     type: "link" as const,
     href: "/",
-    label: "Dashboard",
-    icon: <LayoutDashboard size={16} />,
+    label: "Command Registry",
+    sub: "DASHBOARD",
+    icon: <LayoutDashboard size={14} />,
     match: (p: string) => p === "/",
   },
-  // "Silos" removed — Dashboard IS the silo grid
   {
     type: "link" as const,
     href: "/live-map",
-    label: "Live Map",
-    icon: <Map size={16} />,
+    label: "Facility Map",
+    sub: "LIVE MAP",
+    icon: <Map size={14} />,
     match: (p: string) => p.startsWith("/live-map"),
   },
-  { type: "coming" as const, label: "Reports",  icon: <BarChart2 size={16} />, name: "Analytics & Reports" },
-  { type: "settings" as const, label: "Settings", icon: <Settings size={16} /> },
+  { type: "coming" as const, label: "Analytics", sub: "REPORTS", icon: <BarChart2 size={14} />, name: "Analytics & Reports" },
+  { type: "settings" as const, label: "Configuration", sub: "SETTINGS", icon: <Settings size={14} /> },
 ];
 
 interface Toast { id: number; label: string }
@@ -36,17 +37,36 @@ function ComingSoonToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => 
       initial={{ opacity: 0, y: 12, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="flex items-start gap-3 px-4 py-3 rounded-2xl w-64 bg-slate-900/90 backdrop-blur-xl border border-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.6)]"
+      className="flex items-start gap-3 px-4 py-3 rounded-2xl w-64 glass-archival"
     >
-      <Sparkles size={14} className="text-indigo-400 shrink-0 mt-0.5" />
       <div className="flex-1">
-        <p className="font-outfit font-semibold text-slate-200 text-sm">{toast.label}</p>
-        <p className="font-plus-jakarta text-slate-500 text-xs mt-0.5">Coming soon!</p>
+        <p className="font-cinzel text-xs tracking-widest uppercase" style={{ color: "var(--text-primary)" }}>{toast.label}</p>
+        <p className="font-plus-jakarta text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Coming soon</p>
       </div>
-      <button onClick={onDismiss} className="text-slate-600 hover:text-slate-300 transition-colors">
-        <X size={13} />
+      <button onClick={onDismiss} style={{ color: "var(--text-muted)" }} className="hover:opacity-70 transition-opacity mt-0.5">
+        <X size={12} />
       </button>
     </motion.div>
+  );
+}
+
+// Small inline wheat SVG mark for the brand area
+function WheatMark() {
+  return (
+    <svg width="20" height="32" viewBox="0 0 20 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="30" x2="10" y2="6" stroke="#A48259" strokeWidth="1.2" strokeLinecap="round"/>
+      {[6, 10, 14, 18, 22].map((y, i) => {
+        const s = 1 - i * 0.08;
+        return (
+          <g key={y}>
+            <path d={`M10 ${y} Q${10 - 7 * s} ${y - 2 * s} ${10 - 4 * s} ${y - 5 * s} Q${10 - 1 * s} ${y - 3 * s} 10 ${y}`}
+              stroke="#A48259" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+            <path d={`M10 ${y} Q${10 + 7 * s} ${y - 2 * s} ${10 + 4 * s} ${y - 5 * s} Q${10 + 1 * s} ${y - 3 * s} 10 ${y}`}
+              stroke="#A48259" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -67,69 +87,147 @@ export default function Sidebar() {
     <>
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
-      <aside className="hidden lg:flex flex-col shrink-0 w-60 border-r border-white/[0.04] bg-gradient-to-b from-slate-950 via-slate-950/95 to-slate-950 relative z-10">
-        {/* Brand */}
-        <div className="flex items-center gap-3 px-5 pt-7 pb-6">
-          <div className="flex items-center justify-center size-9 rounded-xl shrink-0 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-[0_0_20px_rgba(52,211,153,0.4)]">
-            <Wheat size={17} className="text-white" />
+      <aside
+        className="hidden lg:flex flex-col shrink-0 w-60 relative z-10"
+        style={{
+          backgroundColor: "var(--sidebar-bg)",
+          borderRight: "1px solid var(--sidebar-border)",
+        }}
+      >
+        {/* ── Brand Mark ── */}
+        <div className="flex items-center gap-4 px-6 pt-8 pb-7">
+          <div className="shrink-0 opacity-90">
+            <WheatMark />
           </div>
           <div>
-            <p className="font-outfit font-bold text-[17px] text-white tracking-tight leading-none">Silo</p>
-            <p className="text-[9px] text-slate-600 tracking-[0.2em] uppercase mt-0.5">Grain Intelligence</p>
+            <p
+              className="font-cinzel font-semibold leading-none tracking-[0.22em] uppercase"
+              style={{ color: "var(--text-primary)", fontSize: "15px" }}
+            >
+              Silo
+            </p>
+            <p
+              className="font-plus-jakarta mt-1.5 leading-none"
+              style={{ color: "var(--text-muted)", fontSize: "8px", letterSpacing: "0.18em" }}
+            >
+              GRAIN INTELLIGENCE SYSTEM
+            </p>
           </div>
         </div>
 
-        <p className="px-5 mb-2 text-[9px] font-semibold tracking-[0.18em] text-slate-600 uppercase">Navigation</p>
+        {/* ── Ruled Divider ── */}
+        <div style={{ height: "1px", backgroundColor: "var(--border-muted)", margin: "0 24px 20px" }} />
 
-        <nav className="flex-1 px-3 space-y-0.5">
+        {/* ── Nav Section Label ── */}
+        <p
+          className="px-6 mb-3"
+          style={{ color: "var(--text-muted)", fontSize: "8px", letterSpacing: "0.22em", fontFamily: "var(--font-outfit)", fontWeight: 600 }}
+        >
+          REGISTRY INDEX
+        </p>
+
+        {/* ── Navigation Items ── */}
+        <nav className="flex-1 px-4 space-y-0.5">
           {NAV.map((item, i) => {
             if (item.type === "link") {
               const isActive = item.match(pathname);
               return (
                 <Link key={i} href={item.href}
-                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${isActive ? "bg-white/[0.07] text-white" : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"}`}
+                  className="group relative flex items-center gap-3 px-3 py-3 text-sm transition-all duration-200"
+                  style={{
+                    backgroundColor: isActive ? "rgba(164,130,89,0.09)" : "transparent",
+                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                    borderRadius: "6px",
+                  }}
                 >
+                  {/* Active left-border tab */}
                   {isActive && (
-                    <motion.span layoutId="nav-pill"
-                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-emerald-400"
+                    <motion.span layoutId="nav-tab"
+                      className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full"
+                      style={{ backgroundColor: "var(--accent)" }}
                       transition={{ type: "spring", stiffness: 420, damping: 36 }}
                     />
                   )}
-                  <span className={isActive ? "text-emerald-400" : "text-slate-600 group-hover:text-slate-400 transition-colors"}>{item.icon}</span>
-                  {item.label}
+                  <span style={{ color: isActive ? "var(--accent)" : "var(--text-muted)" }} className="shrink-0 transition-colors">
+                    {item.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-plus-jakarta font-medium text-[13px] leading-none">{item.label}</p>
+                    <p className="font-plus-jakarta mt-1 leading-none"
+                      style={{ fontSize: "8px", letterSpacing: "0.18em", color: isActive ? "var(--accent)" : "var(--text-muted)" }}>
+                      {item.sub}
+                    </p>
+                  </div>
                 </Link>
               );
             }
             if (item.type === "settings") {
               return (
                 <button key={i} onClick={() => setSettingsOpen(true)}
-                  className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all duration-150 ${settingsOpen ? "bg-white/[0.07] text-white" : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"}`}
+                  className="group w-full flex items-center gap-3 px-3 py-3 text-left text-sm transition-all duration-200"
+                  style={{
+                    backgroundColor: settingsOpen ? "rgba(164,130,89,0.09)" : "transparent",
+                    color: settingsOpen ? "var(--text-primary)" : "var(--text-secondary)",
+                    borderRadius: "6px",
+                  }}
                 >
-                  <span className={`${settingsOpen ? "text-emerald-400" : "text-slate-600 group-hover:text-slate-400"} transition-colors`}>{item.icon}</span>
-                  {item.label}
+                  <span style={{ color: settingsOpen ? "var(--accent)" : "var(--text-muted)" }} className="shrink-0 transition-colors">
+                    {item.icon}
+                  </span>
+                  <div>
+                    <p className="font-plus-jakarta font-medium text-[13px] leading-none">{item.label}</p>
+                    <p className="font-plus-jakarta mt-1 leading-none"
+                      style={{ fontSize: "8px", letterSpacing: "0.18em", color: settingsOpen ? "var(--accent)" : "var(--text-muted)" }}>
+                      {item.sub}
+                    </p>
+                  </div>
                 </button>
               );
             }
             return (
               <button key={i} onClick={() => addToast(item.name)}
-                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium text-slate-600 hover:text-slate-400 hover:bg-white/[0.03] transition-all"
+                className="group w-full flex items-center gap-3 px-3 py-3 text-left text-sm transition-all"
+                style={{ color: "var(--text-muted)", borderRadius: "6px" }}
               >
-                <span className="text-slate-700 group-hover:text-slate-500 transition-colors">{item.icon}</span>
-                {item.label}
-                <span className="ml-auto text-[9px] font-semibold tracking-widest uppercase text-slate-700">Soon</span>
+                <span className="shrink-0">{item.icon}</span>
+                <div>
+                  <p className="font-plus-jakarta font-medium text-[13px] leading-none" style={{ color: "var(--text-secondary)" }}>
+                    {item.label}
+                  </p>
+                  <p className="font-plus-jakarta mt-1 leading-none"
+                    style={{ fontSize: "8px", letterSpacing: "0.18em", color: "var(--text-muted)" }}>
+                    {item.sub}
+                  </p>
+                </div>
+                <span className="ml-auto font-outfit text-[8px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: "rgba(164,130,89,0.08)", color: "var(--text-muted)", border: "1px solid var(--border-glass)" }}>
+                  Soon
+                </span>
               </button>
             );
           })}
         </nav>
 
-        <div className="px-5 py-4 mt-auto">
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-            <p className="flex-1 font-plus-jakarta text-[10px] text-slate-500">v0.1.0 — Beta</p>
-            <div className="size-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+        {/* ── Bottom Registry Stamp ── */}
+        <div className="px-6 py-5 mt-auto">
+          <div style={{ height: "1px", backgroundColor: "var(--border-muted)", marginBottom: "14px" }} />
+          <div className="flex items-center justify-between">
+            <p className="font-plus-jakarta"
+              style={{ color: "var(--text-muted)", fontSize: "8px", letterSpacing: "0.18em" }}>
+              REGISTRY v0.1 // SECURE
+            </p>
+            <div
+              className="size-1.5 rounded-full"
+              style={{
+                backgroundColor: "var(--accent)",
+                boxShadow: "0 0 5px var(--accent-glow)",
+              }}
+            />
           </div>
         </div>
       </aside>
 
+      {/* Toast Stack */}
       <div className="fixed bottom-6 left-4 z-[60] flex flex-col gap-2">
         <AnimatePresence mode="popLayout">
           {toasts.map((t) => (
