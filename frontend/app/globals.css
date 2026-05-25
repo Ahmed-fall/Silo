@@ -1,38 +1,50 @@
 @import "tailwindcss";
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   SILO — Premium Government Modern Chic
-   Clean White & Turquoise · Light Mode · Apple-style Minimalism
+   SILO — State Preservation Archive
+   Archival Bone-Beige · Bronze · Espresso · Governmental Authority
    ══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Design Tokens ────────────────────────────────────────────────────────── */
 :root {
-  --bg-base:        #F8FAFC;
-  --bg-surface:     rgba(255, 255, 255, 0.75);
-  --bg-elevated:    rgba(255, 255, 255, 0.95);
+  /* Canvas */
+  --bg-base:        #F5F2EB;   /* Archival bone-beige */
+  --bg-surface:     rgba(250, 247, 240, 0.72); /* Warm ivory glass */
+  --bg-elevated:    rgba(252, 249, 243, 0.97); /* Parchment elevated */
 
-  --accent:         #40E0D0;
-  --accent-glow:    rgba(64, 224, 208, 0.35);
-  --accent-subtle:  rgba(64, 224, 208, 0.08);
+  /* Accent: Gold-Bronze (wheat grain) */
+  --accent:         #A48259;
+  --accent-glow:    rgba(164, 130, 89, 0.28);
+  --accent-subtle:  rgba(164, 130, 89, 0.07);
 
-  --alert:          #E11D48;
-  --alert-glow:     rgba(225, 29, 72, 0.30);
+  /* Danger: Crimson Seal */
+  --alert:          #C93047;
+  --alert-glow:     rgba(201, 48, 71, 0.30);
 
-  --warning:        #CD7F32;
-  --warning-glow:   rgba(205, 127, 50, 0.30);
+  /* Caution: Amber */
+  --warning:        #C17A2B;
+  --warning-glow:   rgba(193, 122, 43, 0.30);
 
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
+  /* Typography */
+  --text-primary:   #2A2418;   /* Deep espresso ink */
+  --text-secondary: #6B5E4E;   /* Faded walnut */
+  --text-muted:     #A0917E;   /* Aged parchment text */
 
-  --border-glass:   rgba(64, 224, 208, 0.30);
-  --border-muted:   rgba(15, 23, 42, 0.08);
+  /* Borders */
+  --border-glass:   rgba(164, 130, 89, 0.18); /* Bronze glass border */
+  --border-muted:   rgba(62, 53, 41, 0.08);   /* Warm ink border */
+
+  /* Sidebar */
+  --sidebar-bg:     #EDE8DF;   /* Slightly darker archival parchment */
+  --sidebar-border: rgba(164, 130, 89, 0.15);
 }
 
 /* ── Font CSS variables (set by Next.js next/font) ───────────────────────── */
 @theme inline {
   --font-outfit: var(--font-outfit);
   --font-plus-jakarta: var(--font-plus-jakarta);
+  --font-cinzel: var(--font-cinzel);
+  --font-ibm-mono: var(--font-ibm-mono);
 }
 
 /* ── Base reset ──────────────────────────────────────────────────────────── */
@@ -46,11 +58,16 @@ html {
   color-scheme: light;
 }
 
-/* ── Clean Airy Background ──────────────────────────────────────────────── */
+/* ── Archival Warm Background ───────────────────────────────────────────── */
+/* Body is transparent — the wheat parallax field sits behind everything     */
+html {
+  background-color: var(--bg-base);
+}
+
 body {
   font-family: var(--font-plus-jakarta, system-ui, sans-serif);
   color: var(--text-primary);
-  background-color: var(--bg-base);
+  background-color: transparent; /* Let the wheat field show through */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -64,25 +81,38 @@ body {
   font-family: var(--font-plus-jakarta, system-ui, sans-serif);
 }
 
-/* ── Tactical Glass ─────────────────────────────────────────────────────── */
-/* The signature panel style: frosted white with ultra-thin Turquoise border */
-.glass-tactical {
-  background: var(--bg-surface);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid var(--border-glass);
-  box-shadow:
-    0 0 1px rgba(64, 224, 208, 0.08) inset,
-    0 4px 24px rgba(0, 0, 0, 0.06);
+.font-cinzel {
+  font-family: var(--font-cinzel, Georgia, serif);
 }
 
-/* Legacy .glass alias — maps to tactical glass */
+/* ── Archival Glass — Warm, matte, parchment-tinted ─────────────────────── */
+/* Primary glass style for the new archival aesthetic */
+.glass-archival {
+  background: rgba(250, 247, 240, 0.60);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  border: 1px solid rgba(164, 130, 89, 0.16);
+  box-shadow: 0 4px 24px rgba(62, 53, 41, 0.05);
+}
+
+/* ── Tactical Glass — retargeted to warm archival tones ─────────────────── */
+.glass-tactical {
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid var(--border-glass);
+  box-shadow:
+    0 0 1px rgba(164, 130, 89, 0.06) inset,
+    0 4px 24px rgba(62, 53, 41, 0.06);
+}
+
+/* Legacy alias */
 .glass {
   background: var(--bg-surface);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
   border: 1px solid var(--border-glass);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px rgba(62, 53, 41, 0.05);
 }
 
 /* ── Border glow utilities ──────────────────────────────────────────────── */
@@ -91,34 +121,34 @@ body {
 }
 
 .border-glow-alert {
-  border-color: rgba(225, 29, 72, 0.25);
+  border-color: rgba(201, 48, 71, 0.25);
 }
 
 .border-glow-warning {
-  border-color: rgba(205, 127, 50, 0.25);
+  border-color: rgba(193, 122, 43, 0.25);
 }
 
-/* ── Floating shadow (subtle, airy) ─────────────────────────────────────── */
+/* ── Floating shadow (warm, airy) ────────────────────────────────────────── */
 .shadow-float {
   box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.06),
-    0 8px 32px rgba(0, 0, 0, 0.04);
+    0 2px 12px rgba(62, 53, 41, 0.06),
+    0 8px 32px rgba(62, 53, 41, 0.04);
 }
 
 .shadow-float-lg {
   box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.08),
-    0 16px 48px rgba(0, 0, 0, 0.06);
+    0 4px 20px rgba(62, 53, 41, 0.08),
+    0 16px 48px rgba(62, 53, 41, 0.06);
 }
 
-/* ── Thin scrollbar (light theme) ───────────────────────────────────────── */
+/* ── Thin scrollbar (warm theme) ─────────────────────────────────────────── */
 .scrollbar-thin {
   scrollbar-width: thin;
 }
 
 .scrollbar-track-transparent,
 .scrollbar-thumb-slate-800 {
-  scrollbar-color: rgba(64, 224, 208, 0.18) transparent;
+  scrollbar-color: rgba(164, 130, 89, 0.20) transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -126,11 +156,11 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(64, 224, 208, 0.22);
+  background: rgba(164, 130, 89, 0.25);
   border-radius: 9999px;
 }
 
-/* ── Glow utilities (Turquoise / Bronze / Red only) ──────────────────────── */
+/* ── Glow utilities ──────────────────────────────────────────────────────── */
 .glow-accent {
   box-shadow: 0 0 20px var(--accent-glow);
 }
@@ -143,7 +173,7 @@ body {
   box-shadow: 0 0 20px var(--warning-glow);
 }
 
-/* ── Custom scrollbar for chat window ─────────────────────────────────── */
+/* ── Custom scrollbar for chat window ──────────────────────────────────── */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -153,12 +183,12 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(64, 224, 208, 0.20);
+  background: rgba(164, 130, 89, 0.22);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(64, 224, 208, 0.35);
+  background: rgba(164, 130, 89, 0.38);
 }
 
 .custom-scrollbar-hide {
@@ -168,6 +198,37 @@ body {
 
 .custom-scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* ── Ink-stamp divider ───────────────────────────────────────────────────── */
+/* Thin ruled lines mimicking archival ledger separators */
+.ruled-line {
+  border-top: 1px solid var(--border-muted);
+}
+
+.ruled-line-accent {
+  border-top: 1px solid var(--border-glass);
+}
+
+/* ── Paper Grain Noise Texture ────────────────────────────────────────────── */
+/* Fixed overlay using SVG feTurbulence — creates physical printed paper feel  */
+/* z-index: 1 → above wheat field (z:0) but below all UI (z:10)               */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ── Card dossier strip pulse (high-risk crimson strip) ──────────────────── */
+@keyframes stripPulse {
+  0%   { opacity: 0.65; box-shadow: none; }
+  100% { opacity: 1.0;  box-shadow: 2px 0 10px rgba(201, 48, 71, 0.55); }
 }
 
 /* ╔══════════════════════════════════════════════════════════════════════════╗
