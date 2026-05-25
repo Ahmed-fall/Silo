@@ -25,12 +25,13 @@ services:
     env_file: .env
     environment:
       POSTGRES_HOST: db
-      OLLAMA_URL: http://172.18.0.1:11434
+      OLLAMA_URL: http://host.docker.internal:11434
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
+      - ./ai-predictive/app/model/weights:/ai-predictive/app/model/weights
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -42,6 +43,7 @@ services:
       - "8001:8001"
     volumes:
       - ./uploads:/app/uploads
+      - ./ai-vision/app/model/weights:/app/app/model/weights
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001
 
   ai-predictive:
@@ -49,6 +51,10 @@ services:
     restart: always
     ports:
       - "8002:8002"
+    # OPTIONAL: If the ai-predictive service container also needs to read these weights internally, 
+    # uncomment the lines below:
+    # volumes:
+    #   - ./ai-predictive/app/model/weights:/app/app/model/weights
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002
 
   frontend:
