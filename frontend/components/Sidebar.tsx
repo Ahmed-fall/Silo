@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
-import { LayoutDashboard, Map, BarChart2, Settings, X } from "lucide-react";
-import SettingsDrawer from "@/components/SettingsDrawer";
+import { LayoutDashboard, Map, BarChart2, Settings, X, BookOpen } from "lucide-react";
 
 const NAV = [
   {
@@ -23,6 +22,14 @@ const NAV = [
     sub: "LIVE MAP",
     icon: <Map size={14} />,
     match: (p: string) => p.startsWith("/live-map"),
+  },
+  {
+    type: "link" as const,
+    href: "/diseases",
+    label: "Disease Encyclopedia",
+    sub: "REFERENCE",
+    icon: <BookOpen size={14} />,
+    match: (p: string) => p.startsWith("/diseases"),
   },
   { type: "coming" as const, label: "Analytics", sub: "REPORTS", icon: <BarChart2 size={14} />, name: "Analytics & Reports" },
   { type: "settings" as const, label: "Configuration", sub: "SETTINGS", icon: <Settings size={14} /> },
@@ -70,10 +77,15 @@ function WheatMark() {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({
+  settingsOpen,
+  onSettingsOpen,
+}: {
+  settingsOpen: boolean;
+  onSettingsOpen: () => void;
+}) {
   const pathname = usePathname();
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   let _id = 0;
 
   const addToast = useCallback((label: string) => {
@@ -85,8 +97,6 @@ export default function Sidebar() {
 
   return (
     <>
-      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-
       <aside
         className="hidden lg:flex flex-col shrink-0 w-60 relative z-10"
         style={{
@@ -163,7 +173,7 @@ export default function Sidebar() {
             }
             if (item.type === "settings") {
               return (
-                <button key={i} onClick={() => setSettingsOpen(true)}
+                <button key={i} onClick={() => onSettingsOpen()}
                   className="group w-full flex items-center gap-3 px-3 py-3 text-left text-sm transition-all duration-200"
                   style={{
                     backgroundColor: settingsOpen ? "rgba(164,130,89,0.09)" : "transparent",
