@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
-import { LayoutDashboard, Map, BarChart2, Settings, Sparkles, X } from "lucide-react";
+import { LayoutDashboard, Map, BarChart2, Settings, Sparkles, X, Sprout } from "lucide-react";
 import SettingsDrawer from "@/components/SettingsDrawer";
 import { BrandLogo } from "@/components/BrandLogo";
 
@@ -22,6 +22,13 @@ const NAV = [
     label: "Live Map",
     icon: <Map size={16} />,
     match: (p: string) => p.startsWith("/live-map"),
+  },
+  {
+    type: "link" as const,
+    href: "/soil-analysis",
+    label: "Soil Analysis",
+    icon: <Sprout size={16} />,
+    match: (p: string) => p.startsWith("/soil-analysis"),
   },
   { type: "coming" as const, label: "Reports",  icon: <BarChart2 size={16} />, name: "Analytics & Reports" },
   { type: "settings" as const, label: "Settings", icon: <Settings size={16} /> },

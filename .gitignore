@@ -27,6 +27,7 @@ env/
 ai-vision/app/model/weights/
 
 *.pt
+*.pth
 
 *.csv
 *.zip
