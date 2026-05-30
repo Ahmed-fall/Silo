@@ -4,34 +4,43 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
-import { LayoutDashboard, Map, BarChart2, Settings, Sparkles, X, Sprout } from "lucide-react";
-import SettingsDrawer from "@/components/SettingsDrawer";
-import { BrandLogo } from "@/components/BrandLogo";
+import { LayoutDashboard, Map, BarChart2, Settings, X, BookOpen, Sprout } from "lucide-react";
 
 const NAV = [
   {
     type: "link" as const,
     href: "/",
-    label: "Dashboard",
-    icon: <LayoutDashboard size={16} />,
+    label: "Command Registry",
+    sub: "DASHBOARD",
+    icon: <LayoutDashboard size={14} />,
     match: (p: string) => p === "/",
   },
   {
     type: "link" as const,
     href: "/live-map",
-    label: "Live Map",
-    icon: <Map size={16} />,
+    label: "Facility Map",
+    sub: "LIVE MAP",
+    icon: <Map size={14} />,
     match: (p: string) => p.startsWith("/live-map"),
   },
   {
     type: "link" as const,
     href: "/soil-analysis",
     label: "Soil Analysis",
-    icon: <Sprout size={16} />,
+    sub: "CLASSIFIER",
+    icon: <Sprout size={14} />,
     match: (p: string) => p.startsWith("/soil-analysis"),
   },
-  { type: "coming" as const, label: "Reports",  icon: <BarChart2 size={16} />, name: "Analytics & Reports" },
-  { type: "settings" as const, label: "Settings", icon: <Settings size={16} /> },
+  {
+    type: "link" as const,
+    href: "/diseases",
+    label: "Disease Encyclopedia",
+    sub: "REFERENCE",
+    icon: <BookOpen size={14} />,
+    match: (p: string) => p.startsWith("/diseases"),
+  },
+  { type: "coming" as const, label: "Analytics", sub: "REPORTS", icon: <BarChart2 size={14} />, name: "Analytics & Reports" },
+  { type: "settings" as const, label: "Configuration", sub: "SETTINGS", icon: <Settings size={14} /> },
 ];
 
 interface Toast { id: number; label: string }
@@ -43,24 +52,48 @@ function ComingSoonToast({ toast, onDismiss }: { toast: Toast; onDismiss: () => 
       initial={{ opacity: 0, y: 12, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="flex items-start gap-3 px-4 py-3 rounded-2xl w-64 glass-tactical"
+      className="flex items-start gap-3 px-4 py-3 rounded-2xl w-64 glass-archival"
     >
-      <Sparkles size={14} className="shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
       <div className="flex-1">
-        <p className="font-outfit font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{toast.label}</p>
-        <p className="font-plus-jakarta text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>Coming soon!</p>
+        <p className="font-cinzel text-xs tracking-widest uppercase" style={{ color: "var(--text-primary)" }}>{toast.label}</p>
+        <p className="font-plus-jakarta text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Coming soon</p>
       </div>
-      <button onClick={onDismiss} style={{ color: "var(--text-muted)" }} className="hover:opacity-70 transition-opacity">
-        <X size={13} />
+      <button onClick={onDismiss} style={{ color: "var(--text-muted)" }} className="hover:opacity-70 transition-opacity mt-0.5">
+        <X size={12} />
       </button>
     </motion.div>
   );
 }
 
-export default function Sidebar() {
+// Small inline wheat SVG mark for the brand area
+function WheatMark() {
+  return (
+    <svg width="20" height="32" viewBox="0 0 20 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="30" x2="10" y2="6" stroke="#A48259" strokeWidth="1.2" strokeLinecap="round"/>
+      {[6, 10, 14, 18, 22].map((y, i) => {
+        const s = 1 - i * 0.08;
+        return (
+          <g key={y}>
+            <path d={`M10 ${y} Q${10 - 7 * s} ${y - 2 * s} ${10 - 4 * s} ${y - 5 * s} Q${10 - 1 * s} ${y - 3 * s} 10 ${y}`}
+              stroke="#A48259" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+            <path d={`M10 ${y} Q${10 + 7 * s} ${y - 2 * s} ${10 + 4 * s} ${y - 5 * s} Q${10 + 1 * s} ${y - 3 * s} 10 ${y}`}
+              stroke="#A48259" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+export default function Sidebar({
+  settingsOpen,
+  onSettingsOpen,
+}: {
+  settingsOpen: boolean;
+  onSettingsOpen: () => void;
+}) {
   const pathname = usePathname();
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   let _id = 0;
 
   const addToast = useCallback((label: string) => {
@@ -72,105 +105,147 @@ export default function Sidebar() {
 
   return (
     <>
-      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-
       <aside
         className="hidden lg:flex flex-col shrink-0 w-60 relative z-10"
         style={{
-          backgroundColor: "var(--bg-elevated)",
-          borderRight: "1px solid var(--border-glass)",
+          backgroundColor: "var(--sidebar-bg)",
+          borderRight: "1px solid var(--sidebar-border)",
         }}
       >
-        {/* Brand */}
-        <div className="flex items-center gap-3 px-5 pt-7 pb-6">
-          <div
-            className="flex items-center justify-center size-9 rounded-xl shrink-0 overflow-hidden"
-            style={{
-              backgroundColor: "var(--accent)",
-              boxShadow: "0 0 20px var(--accent-glow)",
-            }}
-          >
-            <BrandLogo className="size-6 text-white" />
+        {/* ── Brand Mark ── */}
+        <div className="flex items-center gap-4 px-6 pt-8 pb-7">
+          <div className="shrink-0 opacity-90">
+            <WheatMark />
           </div>
           <div>
-            <p className="font-outfit font-bold text-[17px] tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>Silo</p>
-            <p className="text-[9px] tracking-[0.2em] uppercase mt-0.5" style={{ color: "var(--text-muted)" }}>Grain Intelligence</p>
+            <p
+              className="font-cinzel font-semibold leading-none tracking-[0.22em] uppercase"
+              style={{ color: "var(--text-primary)", fontSize: "15px" }}
+            >
+              Silo
+            </p>
+            <p
+              className="font-plus-jakarta mt-1.5 leading-none"
+              style={{ color: "var(--text-muted)", fontSize: "8px", letterSpacing: "0.18em" }}
+            >
+              GRAIN INTELLIGENCE SYSTEM
+            </p>
           </div>
         </div>
 
-        <p className="px-5 mb-2 text-[9px] font-semibold tracking-[0.18em] uppercase" style={{ color: "var(--text-muted)" }}>Navigation</p>
+        {/* ── Ruled Divider ── */}
+        <div style={{ height: "1px", backgroundColor: "var(--border-muted)", margin: "0 24px 20px" }} />
 
-        <nav className="flex-1 px-3 space-y-0.5">
+        {/* ── Nav Section Label ── */}
+        <p
+          className="px-6 mb-3"
+          style={{ color: "var(--text-muted)", fontSize: "8px", letterSpacing: "0.22em", fontFamily: "var(--font-outfit)", fontWeight: 600 }}
+        >
+          REGISTRY INDEX
+        </p>
+
+        {/* ── Navigation Items ── */}
+        <nav className="flex-1 px-4 space-y-0.5">
           {NAV.map((item, i) => {
             if (item.type === "link") {
               const isActive = item.match(pathname);
               return (
                 <Link key={i} href={item.href}
-                  className="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                  className="group relative flex items-center gap-3 px-3 py-3 text-sm transition-all duration-200"
                   style={{
-                    backgroundColor: isActive ? "var(--accent-subtle)" : "transparent",
+                    backgroundColor: isActive ? "rgba(164,130,89,0.09)" : "transparent",
                     color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                    borderRadius: "6px",
                   }}
                 >
+                  {/* Active left-border tab */}
                   {isActive && (
-                    <motion.span layoutId="nav-pill"
-                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full"
+                    <motion.span layoutId="nav-tab"
+                      className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full"
                       style={{ backgroundColor: "var(--accent)" }}
                       transition={{ type: "spring", stiffness: 420, damping: 36 }}
                     />
                   )}
-                  <span style={{ color: isActive ? "var(--accent)" : "var(--text-muted)" }} className="transition-colors">{item.icon}</span>
-                  {item.label}
+                  <span style={{ color: isActive ? "var(--accent)" : "var(--text-muted)" }} className="shrink-0 transition-colors">
+                    {item.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-plus-jakarta font-medium text-[13px] leading-none">{item.label}</p>
+                    <p className="font-plus-jakarta mt-1 leading-none"
+                      style={{ fontSize: "8px", letterSpacing: "0.18em", color: isActive ? "var(--accent)" : "var(--text-muted)" }}>
+                      {item.sub}
+                    </p>
+                  </div>
                 </Link>
               );
             }
             if (item.type === "settings") {
               return (
-                <button key={i} onClick={() => setSettingsOpen(true)}
-                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all duration-150"
+                <button key={i} onClick={() => onSettingsOpen()}
+                  className="group w-full flex items-center gap-3 px-3 py-3 text-left text-sm transition-all duration-200"
                   style={{
-                    backgroundColor: settingsOpen ? "var(--accent-subtle)" : "transparent",
+                    backgroundColor: settingsOpen ? "rgba(164,130,89,0.09)" : "transparent",
                     color: settingsOpen ? "var(--text-primary)" : "var(--text-secondary)",
+                    borderRadius: "6px",
                   }}
                 >
-                  <span style={{ color: settingsOpen ? "var(--accent)" : "var(--text-muted)" }} className="transition-colors">{item.icon}</span>
-                  {item.label}
+                  <span style={{ color: settingsOpen ? "var(--accent)" : "var(--text-muted)" }} className="shrink-0 transition-colors">
+                    {item.icon}
+                  </span>
+                  <div>
+                    <p className="font-plus-jakarta font-medium text-[13px] leading-none">{item.label}</p>
+                    <p className="font-plus-jakarta mt-1 leading-none"
+                      style={{ fontSize: "8px", letterSpacing: "0.18em", color: settingsOpen ? "var(--accent)" : "var(--text-muted)" }}>
+                      {item.sub}
+                    </p>
+                  </div>
                 </button>
               );
             }
             return (
               <button key={i} onClick={() => addToast(item.name)}
-                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all"
-                style={{ color: "var(--text-muted)" }}
+                className="group w-full flex items-center gap-3 px-3 py-3 text-left text-sm transition-all"
+                style={{ color: "var(--text-muted)", borderRadius: "6px" }}
               >
-                <span style={{ color: "var(--text-muted)" }} className="transition-colors">{item.icon}</span>
-                <span style={{ color: "var(--text-secondary)" }}>{item.label}</span>
-                <span className="ml-auto text-[9px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-muted)" }}>Soon</span>
+                <span className="shrink-0">{item.icon}</span>
+                <div>
+                  <p className="font-plus-jakarta font-medium text-[13px] leading-none" style={{ color: "var(--text-secondary)" }}>
+                    {item.label}
+                  </p>
+                  <p className="font-plus-jakarta mt-1 leading-none"
+                    style={{ fontSize: "8px", letterSpacing: "0.18em", color: "var(--text-muted)" }}>
+                    {item.sub}
+                  </p>
+                </div>
+                <span className="ml-auto font-outfit text-[8px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: "rgba(164,130,89,0.08)", color: "var(--text-muted)", border: "1px solid var(--border-glass)" }}>
+                  Soon
+                </span>
               </button>
             );
           })}
         </nav>
 
-        <div className="px-5 py-4 mt-auto">
-          <div
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-            style={{
-              backgroundColor: "var(--accent-subtle)",
-              border: "1px solid var(--border-glass)",
-            }}
-          >
-            <p className="flex-1 font-plus-jakarta text-[10px]" style={{ color: "var(--text-secondary)" }}>v0.1.0 — Beta</p>
+        {/* ── Bottom Registry Stamp ── */}
+        <div className="px-6 py-5 mt-auto">
+          <div style={{ height: "1px", backgroundColor: "var(--border-muted)", marginBottom: "14px" }} />
+          <div className="flex items-center justify-between">
+            <p className="font-plus-jakarta"
+              style={{ color: "var(--text-muted)", fontSize: "8px", letterSpacing: "0.18em" }}>
+              REGISTRY v0.1 // SECURE
+            </p>
             <div
-              className="size-2 rounded-full"
+              className="size-1.5 rounded-full"
               style={{
                 backgroundColor: "var(--accent)",
-                boxShadow: "0 0 6px var(--accent-glow)",
+                boxShadow: "0 0 5px var(--accent-glow)",
               }}
             />
           </div>
         </div>
       </aside>
 
+      {/* Toast Stack */}
       <div className="fixed bottom-6 left-4 z-[60] flex flex-col gap-2">
         <AnimatePresence mode="popLayout">
           {toasts.map((t) => (

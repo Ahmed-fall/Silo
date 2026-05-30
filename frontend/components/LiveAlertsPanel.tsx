@@ -30,7 +30,7 @@ const SEV = {
     dot: "var(--accent)",
     text: "var(--accent)",
     border: "var(--border-glass)",
-    glow: "0 4px 16px rgba(64,224,208,0.08)",
+    glow: "0 4px 16px rgba(164,130,89,0.10)",
   },
 };
 
@@ -62,7 +62,7 @@ function DynamicIsland({ muted }: { muted: boolean }) {
   // When muted, show a small greyed pill
   if (muted) {
     return (
-      <div className="flex items-center gap-2 px-3 h-9 rounded-full glass-tactical">
+      <div className="flex items-center gap-2 px-3 h-9 rounded-full glass-archival">
         <BellOff size={12} style={{ color: "var(--text-muted)" }} />
         <span className="font-outfit text-xs" style={{ color: "var(--text-muted)" }}>Muted</span>
       </div>
@@ -79,7 +79,7 @@ function DynamicIsland({ muted }: { muted: boolean }) {
         borderRadius: expanded ? 18 : 18,
       }}
       transition={{ type: "spring", stiffness: 320, damping: 30 }}
-      className="relative flex items-center gap-2.5 overflow-hidden cursor-pointer select-none glass-tactical px-3"
+      className="relative flex items-center gap-2.5 overflow-hidden cursor-pointer select-none glass-archival px-3"
       style={{
         minWidth: 44,
         boxShadow: expanded && latest ? sevCfg.glow : "0 4px 16px rgba(0,0,0,0.06)",
@@ -260,8 +260,8 @@ export default function LiveAlertsPanel() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.97 }}
                 transition={{ type: "spring", stiffness: 360, damping: 32 }}
-                className="absolute right-0 top-12 z-50 w-80 rounded-2xl overflow-hidden glass-tactical"
-                style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.10)" }}
+                className="absolute right-0 top-12 z-50 w-80 rounded-2xl overflow-hidden glass-archival"
+                style={{ boxShadow: "0 24px 80px rgba(62,53,41,0.10)" }}
               >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 pt-4 pb-3"
