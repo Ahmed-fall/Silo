@@ -2,6 +2,9 @@
 
 FastAPI image classification service for soil type analysis. It accepts a soil image and returns the predicted soil label with confidence.
 
+download the model from the following link :
+https://drive.google.com/drive/u/0/folders/1-p1cQqsLw02nhKgY2kSarQlw0Qkbfboy?sort=13&direction=a
+
 ### Model
 PyTorch ConvNeXt soil classification model
 Base architecture: `facebook/convnext-tiny-224`
