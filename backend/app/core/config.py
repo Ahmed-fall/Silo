@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # AI services
     ai_vision_url: str
     ai_predictive_url: str
+    ai_soil_url: str
 
     # Storage
     uploads_dir: str = "./uploads"

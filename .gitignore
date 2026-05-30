@@ -24,9 +24,9 @@ env/
 *.sqlite3
 
 # ML models and datasets - too large for git
-ai-vision/app/model/weights/
 
 *.pt
+*.pth
 
 *.csv
 *.zip

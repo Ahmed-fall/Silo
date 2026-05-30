@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
-import { LayoutDashboard, Map, BarChart2, Settings, X, BookOpen } from "lucide-react";
+import { LayoutDashboard, Map, BarChart2, Settings, X, BookOpen, Sprout } from "lucide-react";
 
 const NAV = [
   {
@@ -22,6 +22,14 @@ const NAV = [
     sub: "LIVE MAP",
     icon: <Map size={14} />,
     match: (p: string) => p.startsWith("/live-map"),
+  },
+  {
+    type: "link" as const,
+    href: "/soil-analysis",
+    label: "Soil Analysis",
+    sub: "CLASSIFIER",
+    icon: <Sprout size={14} />,
+    match: (p: string) => p.startsWith("/soil-analysis"),
   },
   {
     type: "link" as const,
