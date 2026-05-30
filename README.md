@@ -178,10 +178,13 @@ cd ai-vision && uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 # Terminal 3 — AI Predictive
 cd ai-predictive && uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 
-# Terminal 4 — Frontend
+# Terminal 4 — AI Soil
+cd ai-soil && uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+
+# Terminal 5 — Frontend
 cd frontend && npm run dev
 
-# Terminal 5 — Sensor Simulator (optional, for live demo)
+# Terminal 6 — Sensor Simulator (optional, for live demo)
 python scripts/simulate_sensor.py
 ```
 

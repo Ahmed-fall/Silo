@@ -27,6 +27,7 @@ services:
       POSTGRES_HOST: db
       AI_SOIL_URL: http://ai-soil:8003
       OLLAMA_URL: http://172.18.0.1:11434
+      DATABASE_URL: postgresql://silo_user:silo_pass@db:5432/silo_db
     depends_on:
       db:
         condition: service_healthy
