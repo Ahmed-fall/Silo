@@ -294,6 +294,8 @@ function SiloDrawer({ silo, onClose }: {
                 >
                   <X size={13} />
                 </button>
+              </div>
+
               {/* Content */}
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {/* Sensor cards */}
