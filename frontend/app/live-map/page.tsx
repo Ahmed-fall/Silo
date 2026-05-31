@@ -48,17 +48,17 @@ const RISK_CFG: Record<RiskLevel, {
   dot: string; ring: string; badge: string; label: string;
   icon: React.ReactNode; drawerBorder: string; dur: number; border: string;
 }> = {
-  none: { dot: "#40E0D0", ring: "rgba(64,224,208,0.40)", badge: "glass-tactical", label: "Nominal", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />, drawerBorder: "from-[#40E0D0]/60 via-[#40E0D0]/15 to-transparent", dur: 2.8, border: "rgba(64,224,208,0.30)" },
-  low: { dot: "#40E0D0", ring: "rgba(64,224,208,0.35)", badge: "glass-tactical", label: "Low Risk", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />, drawerBorder: "from-[#40E0D0]/50 via-[#40E0D0]/10 to-transparent", dur: 2.6, border: "rgba(64,224,208,0.30)" },
-  medium: { dot: "#CD7F32", ring: "rgba(205,127,50,0.40)", badge: "glass-tactical", label: "Caution", icon: <AlertTriangle size={11} style={{ color: "var(--warning)" }} />, drawerBorder: "from-[#CD7F32]/60 via-[#CD7F32]/15 to-transparent", dur: 2.0, border: "rgba(205,127,50,0.25)" },
-  high: { dot: "#E11D48", ring: "rgba(225,29,72,0.45)", badge: "glass-tactical", label: "Critical", icon: <Flame size={11} style={{ color: "var(--alert)" }} />, drawerBorder: "from-[#E11D48]/65 via-[#E11D48]/15 to-transparent", dur: 1.5, border: "rgba(225,29,72,0.25)" },
+  none: { dot: "var(--accent)", ring: "var(--accent-glow)", badge: "glass-tactical", label: "Nominal", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />, drawerBorder: "from-[#A48259]/60 via-[#A48259]/15 to-transparent", dur: 2.8, border: "var(--border-glass)" },
+  low: { dot: "var(--accent)", ring: "var(--accent-glow)", badge: "glass-tactical", label: "Low Risk", icon: <ShieldCheck size={11} style={{ color: "var(--accent)" }} />, drawerBorder: "from-[#A48259]/50 via-[#A48259]/10 to-transparent", dur: 2.6, border: "var(--border-glass)" },
+  medium: { dot: "var(--warning)", ring: "var(--warning-glow)", badge: "glass-tactical", label: "Caution", icon: <AlertTriangle size={11} style={{ color: "var(--warning)" }} />, drawerBorder: "from-[#C17A2B]/60 via-[#C17A2B]/15 to-transparent", dur: 2.0, border: "rgba(193,122,43,0.25)" },
+  high: { dot: "var(--alert)", ring: "var(--alert-glow)", badge: "glass-tactical", label: "Critical", icon: <Flame size={11} style={{ color: "var(--alert)" }} />, drawerBorder: "from-[#C93047]/65 via-[#C93047]/15 to-transparent", dur: 1.5, border: "rgba(201,48,71,0.25)" },
 };
 
 const AI_CFG: Record<AIStatus, { label: string; detail: string; color: string; bg: string; border: string }> = {
   healthy: { label: "All Clear", detail: "No pathogens or infestations detected.", color: "var(--accent)", bg: "var(--accent-subtle)", border: "var(--border-glass)" },
-  warning: { label: "Anomaly Detected", detail: "Unclassified signature found. Review recommended.", color: "var(--warning)", bg: "rgba(205,127,50,0.08)", border: "rgba(205,127,50,0.25)" },
-  critical: { label: "Infestation Confirmed", detail: "Aphid colony signatures confirmed. Quarantine active.", color: "var(--alert)", bg: "rgba(225,29,72,0.06)", border: "rgba(225,29,72,0.25)" },
-  scanning: { label: "Scan In Progress", detail: "Model inference running — est. 42 s remaining.", color: "#6366f1", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.25)" },
+  warning: { label: "Anomaly Detected", detail: "Unclassified signature found. Review recommended.", color: "var(--warning)", bg: "rgba(193,122,43,0.08)", border: "rgba(193,122,43,0.25)" },
+  critical: { label: "Infestation Confirmed", detail: "Aphid colony signatures confirmed. Quarantine active.", color: "var(--alert)", bg: "rgba(201,48,71,0.06)", border: "rgba(201,48,71,0.25)" },
+  scanning: { label: "Scan In Progress", detail: "Model inference running — est. 42 s remaining.", color: "var(--accent)", bg: "rgba(164,130,89,0.08)", border: "rgba(164,130,89,0.25)" },
 };
 
 // ─── Manual Calibration Coordinates (For max-w-4xl size) ───
@@ -297,27 +297,27 @@ function SiloDrawer({ silo, onClose }: {
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {/* Sensor cards */}
                 <div className="grid grid-cols-2 gap-3 p-5">
                   {[
                     {
-                      icon: <Thermometer size={12} style={{ color: "#f59e0b" }} />,
+                      icon: <Thermometer size={12} style={{ color: "var(--warning)" }} />,
                       label: "Temperature",
                       value: silo.temperature !== undefined && silo.temperature !== null ? `${silo.temperature.toFixed(1)}°C` : "--",
                       color: silo.temperature !== undefined && silo.temperature !== null ? (silo.temperature > 30 ? "var(--alert)" : silo.temperature > 26 ? "var(--warning)" : "var(--accent)") : "var(--text-muted)"
                     },
                     {
-                      icon: <Droplets size={12} style={{ color: "#0ea5e9" }} />,
+                      icon: <Droplets size={12} style={{ color: "var(--accent)" }} />,
                       label: "Humidity",
                       value: silo.humidity !== undefined && silo.humidity !== null ? `${silo.humidity.toFixed(1)}%` : "--",
-                      color: silo.humidity !== undefined && silo.humidity !== null ? (silo.humidity > 75 ? "var(--alert)" : silo.humidity > 65 ? "var(--warning)" : "#0ea5e9") : "var(--text-muted)"
+                      color: silo.humidity !== undefined && silo.humidity !== null ? (silo.humidity > 75 ? "var(--alert)" : silo.humidity > 65 ? "var(--warning)" : "var(--accent)") : "var(--text-muted)"
                     },
                     {
-                      icon: <Activity size={12} style={{ color: "#8b5cf6" }} />,
+                      icon: <Activity size={12} style={{ color: "var(--accent)" }} />,
                       label: "Fill Level",
                       value: silo.fill_pct !== undefined && silo.fill_pct !== null ? `${silo.fill_pct}%` : "--",
-                      color: silo.fill_pct !== undefined && silo.fill_pct !== null ? (silo.fill_pct > 80 ? "var(--alert)" : silo.fill_pct > 50 ? "var(--warning)" : "#8b5cf6") : "var(--text-muted)"
+                      color: silo.fill_pct !== undefined && silo.fill_pct !== null ? (silo.fill_pct > 80 ? "var(--alert)" : silo.fill_pct > 50 ? "var(--warning)" : "var(--accent)") : "var(--text-muted)"
                     },
                     {
                       icon: <Globe size={12} style={{ color: "var(--accent)" }} />,
@@ -327,7 +327,7 @@ function SiloDrawer({ silo, onClose }: {
                     },
                   ].map(({ icon, label, value, color }) => (
                     <div key={label}
-                      className="rounded-xl p-3.5 border"
+                      className="rounded-xl p-3.5 border transition-all duration-200 hover:shadow-sm"
                       style={{
                         backgroundColor: "var(--bg-base)",
                         borderColor: "var(--border-muted)",
@@ -370,10 +370,10 @@ function SiloDrawer({ silo, onClose }: {
                 {/* CTA */}
                 <div className="px-5 pb-6">
                   <Link href={`/silos/${silo.id}`}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-outfit font-semibold border transition-all"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-outfit font-semibold border transition-all hover:opacity-90 cursor-pointer shadow-sm"
                     style={{
-                      backgroundColor: "var(--text-primary)",
-                      borderColor: "var(--text-primary)",
+                      background: "linear-gradient(135deg, var(--accent) 0%, #8D6B44 100%)",
+                      borderColor: "rgba(164, 130, 89, 0.4)",
                       color: "#ffffff",
                     }}
                   >
@@ -457,11 +457,11 @@ export default function LiveMapPage() {
       >
         <div className="flex items-center gap-3">
           <Globe size={14} style={{ color: "var(--text-secondary)" }} />
-          <h1 className="font-outfit font-bold text-[15px] leading-none" style={{ color: "var(--text-primary)" }}>
+          <h1 className="font-cinzel font-bold text-[14px] tracking-wider leading-none uppercase" style={{ color: "var(--text-primary)" }}>
             Geospatial Command Map
           </h1>
           <div className="hidden sm:block h-4 w-px" style={{ backgroundColor: "var(--border-muted)" }} />
-          <span className="hidden sm:block font-plus-jakarta text-[11px]" style={{ color: "var(--text-secondary)" }}>
+          <span className="hidden sm:block font-plus-jakarta text-[10px] tracking-wider uppercase" style={{ color: "var(--text-secondary)" }}>
             National Grain Network · Egypt
           </span>
         </div>
@@ -497,7 +497,7 @@ export default function LiveMapPage() {
       >
         {/* Subtle grid */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: "linear-gradient(rgba(15,23,42,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.03) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(rgba(164,130,89,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(164,130,89,0.05) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }} />
 
@@ -512,7 +512,7 @@ export default function LiveMapPage() {
               preserveAspectRatio="xMidYMid meet"
               className="absolute inset-0 w-full h-full pointer-events-none"
             >
-              <g fill="#E2E8F0" stroke="rgba(64,224,208,0.40)" strokeWidth="0.8">
+              <g fill="rgba(164, 130, 89, 0.06)" stroke="rgba(164, 130, 89, 0.22)" strokeWidth="0.8">
                 <path d="M455.45,20.84L455.61,23.14L454.67,25.01L453.76,28.25L449.5,30.96L446.57,33.69L448.99,35.79L448.53,38.64L447.54,40.8L450.09,44.67L456.13,51.35L451.76,59.19L447.12,61.6L443.38,62.93L441.64,63.2L440.4,65.36L439.32,69.74L435.99,38.04L435.77,34.86L437.85,33.19L439.11,31.81L441.75,29.7L442.82,27.89L443.84,28.8L444.25,28.67L445.47,27.49L446.47,26.18L446.09,26L446.47,24.94L447.47,25.14L449.95,23.01L450.46,22.29L451.5,21.37L451.88,20.55L453.11,20.15L453.59,19.4L453.47,18.89L454.57,18.42L454.59,19.34Z" />
                 <path d="M553.73,520.53L548.52,520.52L548.49,519.47L549.36,516.59L550.57,514.21L551.57,513.11L552.55,511.23L551.78,510.33L551.11,509.15L550.43,508.96L549.58,509.82L545.9,512.41L545.38,512.37L544.44,512.27L541.77,512.57L540.11,510.08L540.72,507.02L544.92,504.53L547.89,503.51L551.92,503.65L554.72,500.61L556.51,498.2L557.25,496.45L557.63,494.69L557.29,492.92L557.02,488.09L556.65,485.63L557.38,483.58L558.74,481.65L559.88,481.09L562.67,481.07L564.74,481.33L566.34,481.08L568.56,480.26L577.08,477.56L582.49,475.76L583.5,476.19L586.11,476.47L588.73,477.05L590.76,478.39L592.31,479.14L593.89,478.11L595.38,474.42L596.2,472.19L597.29,469.77L597.92,467.14L598.97,464.03L600.49,461.04L601.66,458.52L602.98,454.93L604.51,452.14L605.77,449.53L606,448.46L605.38,446.27L603.31,446.39L601.62,446.82L598.9,446.43L593.62,445.07L592.11,443.25L592.25,439.61L593.54,433.06L594.82,430.84L596.31,429.72L598.52,428.22L600.65,427.21L602.61,426.6L604.63,424.7L604.21,423.31L602.63,421.97L600.38,419.73L599.98,416.27L601.28,414.74L602.53,414.2L604.3,413.18L607.77,408.88L607.69,401.79L607.48,398.53L607.77,393.92L607.54,390.16L608.04,386.34L608.44,382.52L608.23,379.36L608.55,375.73L606.49,371.91L605.77,369.51L604.35,365.62L604.12,363.25L603.95,360.4L603.44,358.38L601.68,356.19L598.82,353.43L595.21,351.67L595.91,347.83L595.58,343.94L597.62,345.83L600.12,347.45L602.08,349.37L606.64,352.67L610.34,358.68L611.05,362.33L611.91,372.81L614.15,377.77L617.59,383.36L617.94,385.07L617.84,389.47L614.83,392.39L613.06,395.65L613.1,398.25L612.33,402.16L612.76,408.79L613.68,410.83L614.22,414.12L615.22,415.37L616.55,417.72L616.88,419.76L617.31,421.32L618.42,423.28L620.12,424.3L621.68,426.1L622.2,431.1L623.3,431.55L623.27,433.59L622.61,434.39L622.09,435.48L621.85,437.91L622.08,440.5L623.3,444.25L624.91,444.65L625.87,446.77L626.75,448.38L626.62,449.89L625.91,451.15L625.41,453.58L624.5,455.84L623.04,457.65L622.02,459.13L620.91,461.4L619.7,462.97L619.72,464.3L620.76,465.24L623.43,467.98L626.48,468.25L627.57,469.34L631.07,471.94L633.55,475.85L634,479.53L632.94,481.78L630.19,481.34L627.21,478.07L625.62,475.94L622.76,476.42L620.13,475.56L618.21,474.25L615.46,472.22L612.31,472.58L609.41,474.4L610.05,480.55L609.1,484.34L606.95,487.21L604.31,488.98L600.74,491.71L597.77,494.77L592.29,496.62L588.73,494.93L586.22,492.39L584.63,490.28L582.41,488.79L579.7,489.53L578.81,494.47L578.57,497.1L577.57,500.3L576.65,502.49L575.37,504.43L572.71,505.72L568.37,504.97L567.13,508.47L565.28,510.67L562.61,512.27L554.62,515.34Z" />
                 <path d="M541.57,260.75L539.36,260.74L538.38,258.74L537.27,257.69L536.24,255.56L535.29,254.32L533.51,254.12L533.02,255.29L532.01,257.08L531.2,257.77L529.56,258.8L528.45,259.85L527.82,260.06L525.31,256.07L523.17,251.45L521.1,247.48L519.18,244.46L516.39,242.8L514.72,242.38L512.56,242.12L511.54,241.55L509.3,239.54L505.09,235.41L503.66,234.57L502.41,232.8L501.74,230.51L500.22,228.54L499.12,226.35L498.49,223.62L497.43,223.12L497.11,221.04L496.27,220.21L496.19,217.81L497.22,217.71L500.23,217.71L502.08,218.23L504.52,218.64L505.97,217.19L508.74,217.39L508.33,221.02L509.27,226.06L509.99,227.72L511.59,229.6L512.55,230.09L516.02,231.37L517.48,232.51L521.46,234.15L522.61,234.25L526.16,236.18L527.85,240.92L530.84,243.26L533.55,245.6L534.9,246.57L536.52,249.88L539.09,253.93L540.87,258.07Z" />

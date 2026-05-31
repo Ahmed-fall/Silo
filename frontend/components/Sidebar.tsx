@@ -39,7 +39,6 @@ const NAV = [
     icon: <BookOpen size={14} />,
     match: (p: string) => p.startsWith("/diseases"),
   },
-  { type: "coming" as const, label: "Analytics", sub: "REPORTS", icon: <BarChart2 size={14} />, name: "Analytics & Reports" },
   { type: "settings" as const, label: "Configuration", sub: "SETTINGS", icon: <Settings size={14} /> },
 ];
 
