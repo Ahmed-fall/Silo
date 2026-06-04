@@ -477,6 +477,3 @@ Supported by [nWeave](http://nweave.com)
 
 <div align="center">
 Built for Egypt. By Egyptian engineers.
-</div>
-READMEEOF
-echo "Done"
