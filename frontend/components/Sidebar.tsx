@@ -3,10 +3,34 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import type { ReactNode } from "react";
 import { useState, useCallback } from "react";
 import { LayoutDashboard, Map, BarChart2, Settings, X, BookOpen, Sprout } from "lucide-react";
 
-const NAV = [
+type NavItem =
+  | {
+      type: "link";
+      href: string;
+      label: string;
+      sub: string;
+      icon: ReactNode;
+      match: (path: string) => boolean;
+    }
+  | {
+      type: "settings";
+      label: string;
+      sub: string;
+      icon: ReactNode;
+    }
+  | {
+      type: "soon";
+      name: string;
+      label: string;
+      sub: string;
+      icon: ReactNode;
+    };
+
+const NAV: NavItem[] = [
   {
     type: "link" as const,
     href: "/",
@@ -201,7 +225,8 @@ export default function Sidebar({
                 </button>
               );
             }
-            return (
+            if (item.type === "soon") {
+              return (
               <button key={i} onClick={() => addToast(item.name)}
                 className="group w-full flex items-center gap-3 px-3 py-3 text-left text-sm transition-all"
                 style={{ color: "var(--text-muted)", borderRadius: "6px" }}
@@ -221,7 +246,9 @@ export default function Sidebar({
                   Soon
                 </span>
               </button>
-            );
+              );
+            }
+            return null;
           })}
         </nav>
 

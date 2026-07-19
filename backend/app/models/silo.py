@@ -9,6 +9,7 @@ class SiloCreate(BaseModel):
     capacity_kg: Optional[float] = None
     risk_level: Optional[str] = "none"
     crop_type: Optional[str] = "wheat"
+    owner_id: Optional[UUID4] = None
 
 
 class SiloResponse(BaseModel):
@@ -19,6 +20,7 @@ class SiloResponse(BaseModel):
     risk_level: str
     crop_type: str
     created_at: datetime
+    owner_id: Optional[UUID4] = None
 
     class Config:
         from_attributes = True
@@ -37,6 +39,7 @@ class SiloDetailResponse(BaseModel):
     risk_level: Optional[str] = None
     risk_score: Optional[float] = None
     crop_type: Optional[str] = "Wheat"
+    owner_id: Optional[UUID4] = None
 
     class Config:
         from_attributes = True

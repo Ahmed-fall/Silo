@@ -7,7 +7,7 @@ import io
 import os
 import torch
 from torchvision import transforms
-from transformers import AutoModelForImageClassification
+from transformers import ConvNextConfig, ConvNextForImageClassification
 
 app = FastAPI(title="Silo Soil AI Service")
 
@@ -34,12 +34,10 @@ preprocess_transform = transforms.Compose([
 def load_model():
     global model
     try:
-        # Load the model architecture
-        model = AutoModelForImageClassification.from_pretrained(
-            "facebook/convnext-tiny-224",
-            num_labels=NUM_CLASSES,
-            ignore_mismatched_sizes=True
-        )
+        # Build the ConvNeXT-Tiny architecture locally so container startup does not
+        # depend on downloading config or weights from Hugging Face.
+        config = ConvNextConfig(num_labels=NUM_CLASSES)
+        model = ConvNextForImageClassification(config)
         # Load the trained weights
         model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
         model = model.to(DEVICE)

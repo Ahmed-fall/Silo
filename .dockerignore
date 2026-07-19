@@ -1,0 +1,14 @@
+.git
+.vscode
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+node_modules
+.next
+dist
+build
+*.log
+backend/output.txt
+backend/alembic_error.txt

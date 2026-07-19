@@ -273,19 +273,28 @@ The entire stack runs with one command:
 docker compose up --build
 ```
 
-> **Note:** Ollama runs on the host machine. Start it before running Docker:
-> ```bash
-> OLLAMA_HOST=0.0.0.0 ollama serve &
-> ```
-> On Linux, the Docker network gateway is typically `172.18.0.1`. The `docker-compose.yml` is configured to reach Ollama at that address.
-
-Run migrations and seed after first startup:
+Or run it in the background:
 
 ```bash
-docker compose exec backend alembic upgrade head
-# Seed from host machine:
-POSTGRES_HOST=localhost python scripts/seed_data.py
+docker compose up --build -d
 ```
+
+The app will be available at:
+
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Backend docs: http://localhost:8000/docs
+- AI Vision: http://localhost:8001/health
+- AI Predictive: http://localhost:8002/health
+- AI Soil: http://localhost:8003/health
+
+The backend container runs database migrations automatically before it starts.
+
+> **Note:** Ollama still runs on the host machine if you want chatbot model responses. Start it before running Docker:
+> ```bash
+> ollama serve
+> ```
+> Docker Compose reaches it through `host.docker.internal:11434`.
 
 Useful commands:
 

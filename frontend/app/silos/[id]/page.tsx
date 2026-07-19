@@ -204,15 +204,17 @@ export default function SiloDetailPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const timeout = 2_000;
+    const timeout = 8_000;
     const [s, sens, al, fc] = await Promise.allSettled([
       axios.get<SiloDetail>(`${API_BASE}/silos/${id}`, { timeout }),
-      axios.get<SensorReading[]>(`${API_BASE}/sensors/${id}`, { timeout }),
+      // Server returns newest-first; ask for the last 24h worth (72 readings
+      // at 20-min cadence) and reverse to chronological order for the chart.
+      axios.get<SensorReading[]>(`${API_BASE}/sensors/${id}?limit=72`, { timeout }),
       axios.get<SiloAlert[]>(`${API_BASE}/alerts/${id}`, { timeout }),
-      axios.get<SensorReading[]>(`${API_BASE}/ai-predictive/forecast/${id}`, { timeout }),
+      axios.get<SensorReading[]>(`${API_BASE}/sensors/forecast/${id}`, { timeout }),
     ]);
     const siloData = s.status === "fulfilled" ? s.value.data : { ...MOCK_SILO, id: id ?? MOCK_SILO.id };
-    const sensorsData = sens.status === "fulfilled" ? sens.value.data : makeMockSensor(24);
+    const sensorsData = sens.status === "fulfilled" ? [...sens.value.data].reverse() : makeMockSensor(24);
     
     setSilo(siloData);
     setSensors(sensorsData);

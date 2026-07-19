@@ -67,7 +67,7 @@ async def seed():
             (0, "medium", 62.1, "High temperature spike detected in main chamber.", True),
             (1, "medium", 54.8, "Increased pest activity detected by AI vision in Cairo.", False),
             (2, "low", 22.4, "Scheduled maintenance required for sensor array B.", False),
-            (3, "none", 5.0, "System self-test passed: All parameters nominal.", True),
+            (3, "low", 5.0, "System self-test passed: All parameters nominal.", True),
             (1, "high", 91.2, "CRITICAL: Moisture levels exceeding safety threshold!", False),
         ]
         

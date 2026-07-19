@@ -12,8 +12,8 @@ async def create_silo(silo: SiloCreate):
     db = await get_db()
     row = await db.fetchrow(
         """
-        INSERT INTO silos (name, location, capacity_kg, risk_level, crop_type)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO silos (name, location, capacity_kg, risk_level, crop_type, owner_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
         """,
         silo.name,
@@ -21,6 +21,7 @@ async def create_silo(silo: SiloCreate):
         silo.capacity_kg,
         silo.risk_level,
         silo.crop_type,
+        silo.owner_id,
     )
     return dict(row)
 
@@ -36,6 +37,7 @@ async def get_silos():
             s.location,
             s.capacity_kg,
             s.created_at,
+            s.owner_id,
             sr.temperature,
             sr.humidity,
             sr.soil_moisture,
@@ -74,6 +76,7 @@ async def get_silo(silo_id: uuid.UUID):
             s.location,
             s.capacity_kg,
             s.created_at,
+            s.owner_id,
             sr.temperature,
             sr.humidity,
             sr.soil_moisture,

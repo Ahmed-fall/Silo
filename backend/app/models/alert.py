@@ -11,6 +11,8 @@ class AlertResponse(BaseModel):
     message: Optional[str] = None
     triggered_at: datetime
     is_read: bool
+    kind: str = "measured"
+    predicted_for: Optional[datetime] = None
 
     class Config:
         from_attributes = True
