@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.api.silos import resolve_condition
+from app.core.risk import SEVERITY_MAP
 from app.models.silo import SiloDetailResponse
 from typing import List
+import asyncio
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-_SEVERITY_MAP = {"high": "critical", "medium": "warning", "low": "info"}
 
 
 @router.get("/me/silos", response_model=List[SiloDetailResponse])
@@ -30,6 +31,7 @@ async def get_my_silos(current_user: dict = Depends(get_current_user)):
             sr.ndvi,
             a.risk_level,
             a.risk_score,
+            (a.triggered_at > NOW() - INTERVAL '6 hours') AS alert_recent,
             s.crop_type
         FROM silos s
         LEFT JOIN LATERAL (
@@ -40,9 +42,9 @@ async def get_my_silos(current_user: dict = Depends(get_current_user)):
             LIMIT 1
         ) sr ON true
         LEFT JOIN LATERAL (
-            SELECT risk_level, risk_score
+            SELECT risk_level, risk_score, triggered_at
             FROM alerts
-            WHERE silo_id = s.id
+            WHERE silo_id = s.id AND kind = 'measured'
             ORDER BY triggered_at DESC
             LIMIT 1
         ) a ON true
@@ -51,7 +53,7 @@ async def get_my_silos(current_user: dict = Depends(get_current_user)):
         """,
         current_user["id"],
     )
-    return [dict(row) for row in rows]
+    return list(await asyncio.gather(*(resolve_condition(dict(row)) for row in rows)))
 
 
 @router.get("/me/alerts")
@@ -86,7 +88,7 @@ async def get_my_alerts(
             "silo_id": str(row["silo_id"]),
             "silo_name": row["silo_name"],
             "message": row["message"],
-            "severity": _SEVERITY_MAP.get(row["risk_level"], "info"),
+            "severity": SEVERITY_MAP.get(row["risk_level"], "info"),
             "risk_level": row["risk_level"],
             "risk_score": row["risk_score"],
             "timestamp": row["triggered_at"].isoformat(),

@@ -1,41 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query
 from app.core.database import get_db
-from app.core.config import settings
 from app.models.sensor import SensorCreate, SensorResponse
 from app.models.alert import AlertResponse
 from typing import List, Dict, Any, Optional
 import uuid
-import httpx
 import logging
-import joblib
-import os
 import numpy as np
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sensors", tags=["sensors"])
 
-# Load predictive models at startup. This file lives at /app/app/api/sensors.py
-# in the container (WORKDIR /app, backend/ copied in as app/), so two levels
-# up reaches /app, where the ai-predictive weights volume is mounted.
-_project_root = os.path.join(os.path.dirname(__file__), "../..")
-_model_dir = os.path.join(_project_root, "ai-predictive", "app", "model", "weights")
-try:
-    _predictive_model = joblib.load(os.path.join(_model_dir, "crop_health_model_xgb.pkl"))
-    _label_encoder = joblib.load(os.path.join(_model_dir, "label_encoder.pkl"))
-    _models_loaded = True
-    logger.info("Predictive models loaded from %s", _model_dir)
-except Exception as e:
-    logger.warning("Could not load predictive models: %s", e)
-    _models_loaded = False
-    _predictive_model = None
-    _label_encoder = None
-
-# Mirrors ai-predictive/app/model/predict.py's mapping, so forecast points
-# classified locally line up with the risk_level/risk_score domain the rest
-# of the API (and the alerts.risk_level check constraint) already uses.
-_LABEL_TO_RISK = {"Critical": "high", "Healthy": "low", "Stressed": "medium"}
-_RISK_TO_SCORE = {"high": 75, "medium": 45, "low": 15}
+from app.core.risk import classify, SEVERITY_MAP, RISK_TO_SCORE
 
 
 @router.post("/ingest", response_model=SensorResponse)
@@ -59,79 +35,76 @@ async def ingest_sensor(sensor: SensorCreate):
         sensor.ndvi,
     )
 
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{settings.ai_predictive_url}/predict",
-                json={
-                    "temperature": sensor.temperature or 25.0,
-                    "humidity": sensor.humidity or 60.0,
-                    "soil_moisture": sensor.soil_moisture or 20.0,
-                    "ndvi": sensor.ndvi or 0.5,
-                },
-                timeout=5.0,
+    clf = await classify(sensor.temperature, sensor.humidity, sensor.soil_moisture, sensor.ndvi)
+    if clf is not None:
+        if clf["risk_level"] == "low":
+            # Fresh healthy reading: resolve any standing forward-looking
+            # prediction — its premise (deteriorating conditions) no
+            # longer holds, so it must not keep alarming the clients.
+            await db.execute(
+                """
+                UPDATE alerts SET is_read = TRUE
+                WHERE silo_id = $1 AND kind = 'predicted'
+                  AND predicted_for > NOW() AND is_read = FALSE
+                """,
+                sensor.silo_id,
             )
-            result = response.json()
 
-            if result.get("status") == "ok" and result.get("risk_level") in ("high", "medium"):
-                # Cooldown: a silo sitting in a risk regime produces the same
-                # classification on every 20-min reading — don't re-alert at
-                # the same level more than once per 2h. Time-based only: it
-                # must not reset when a client auto-acks the alert on display.
-                recent = await db.fetchrow(
-                    """
-                    SELECT id FROM alerts
-                    WHERE silo_id = $1 AND risk_level = $2 AND kind = 'measured'
-                      AND triggered_at > NOW() - INTERVAL '2 hours'
-                    """,
-                    sensor.silo_id,
-                    result["risk_level"],
-                )
-                if recent:
-                    return dict(row)
+        if clf["risk_level"] in ("high", "medium"):
+            # Cooldown: a silo sitting in a risk regime produces the same
+            # classification on every 20-min reading — don't re-alert at
+            # the same level more than once per 2h. Time-based only: it
+            # must not reset when a client auto-acks the alert on display.
+            recent = await db.fetchrow(
+                """
+                SELECT id FROM alerts
+                WHERE silo_id = $1 AND risk_level = $2 AND kind = 'measured'
+                  AND triggered_at > NOW() - INTERVAL '2 hours'
+                """,
+                sensor.silo_id,
+                clf["risk_level"],
+            )
+            if recent:
+                return dict(row)
 
-                level_label = "High" if result["risk_level"] == "high" else "Elevated"
-                message = (
-                    f"{level_label} spoilage risk detected in {silo['name']}. "
-                    f"Risk score: {result['risk_score']}%. "
-                    f"Temperature: {sensor.temperature}°C, Humidity: {sensor.humidity}%."
-                )
-                alert_row = await db.fetchrow(
-                    """
-                    INSERT INTO alerts (silo_id, risk_level, risk_score, message)
-                    VALUES ($1, $2, $3, $4)
-                    RETURNING id, triggered_at
-                    """,
-                    sensor.silo_id,
-                    result["risk_level"],
-                    result["risk_score"],
-                    message,
-                )
+            level_label = "High" if clf["risk_level"] == "high" else "Elevated"
+            message = (
+                f"{level_label} spoilage risk detected in {silo['name']}. "
+                f"Risk score: {clf['risk_score']}%. "
+                f"Temperature: {sensor.temperature}°C, Humidity: {sensor.humidity}%."
+            )
+            alert_row = await db.fetchrow(
+                """
+                INSERT INTO alerts (silo_id, risk_level, risk_score, message)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id, triggered_at
+                """,
+                sensor.silo_id,
+                clf["risk_level"],
+                clf["risk_score"],
+                message,
+            )
 
-                from app.ws.alerts import manager
-                severity_map = {"high": "critical", "medium": "warning", "low": "info"}
-                await manager.broadcast({
-                    "silo_id": str(sensor.silo_id),
-                    "silo_name": silo["name"],
-                    "risk_level": result["risk_level"],
-                    "risk_score": result["risk_score"],
-                    "severity": severity_map.get(result["risk_level"], "info"),
-                    "message": message,
-                    "timestamp": str(alert_row["triggered_at"]),
-                    "read": False,
-                    "id": str(alert_row["id"]),
-                    "triggered_at": str(alert_row["triggered_at"]),
-                    "kind": "measured",
-                })
+            from app.ws.alerts import manager
+            await manager.broadcast({
+                "silo_id": str(sensor.silo_id),
+                "silo_name": silo["name"],
+                "risk_level": clf["risk_level"],
+                "risk_score": clf["risk_score"],
+                "severity": SEVERITY_MAP.get(clf["risk_level"], "info"),
+                "message": message,
+                "timestamp": str(alert_row["triggered_at"]),
+                "read": False,
+                "id": str(alert_row["id"]),
+                "triggered_at": str(alert_row["triggered_at"]),
+                "kind": "measured",
+            })
 
-                try:
-                    from app.core.push import send_push_to_silo_owner
-                    await send_push_to_silo_owner(sensor.silo_id, "Silo risk alert", message)
-                except Exception as push_err:
-                    logger.warning("Push notification failed: %s", push_err)
-
-    except Exception as e:
-        logger.warning("Predictive service unavailable: %s", e)
+            try:
+                from app.core.push import send_push_to_silo_owner
+                await send_push_to_silo_owner(sensor.silo_id, "Silo risk alert", message)
+            except Exception as push_err:
+                logger.warning("Push notification failed: %s", push_err)
 
     return dict(row)
 
@@ -236,6 +209,7 @@ async def get_forecast(silo_id: uuid.UUID):
     current_temp = base_temp
     current_hum = base_hum
     first_crossing: Optional[Dict[str, Any]] = None
+    prev_risky: Optional[Dict[str, Any]] = None
 
     for hour in range(1, 13):
         # Apply the trend, decaying it each step so the projection levels off
@@ -251,24 +225,18 @@ async def get_forecast(silo_id: uuid.UUID):
 
         # Use predictive model to adjust forecast based on risk
         predicted_risk_level = None
-        if _models_loaded and _predictive_model is not None:
-            try:
-                features = np.array([[current_temp, current_hum, base_soil, base_ndvi]])
-                prediction = _predictive_model.predict(features)[0]
-                label = _label_encoder.inverse_transform([prediction])[0]
-                predicted_risk_level = _LABEL_TO_RISK.get(label)
-
-                # Nudge the projection slightly based on risk classification.
-                # Kept small: this feeds back into the next iteration's
-                # prediction, so a large nudge is a self-fulfilling runaway.
-                if label == "Critical":
-                    current_temp = current_temp + 0.15
-                    current_hum = current_hum + 0.3
-                elif label == "Healthy":
-                    current_temp = current_temp - 0.1
-                    current_hum = current_hum - 0.2
-            except Exception:
-                pass  # fallback to trend-based forecast
+        clf = await classify(current_temp, current_hum, base_soil, base_ndvi)
+        if clf is not None:
+            predicted_risk_level = clf["risk_level"]
+            # Nudge the projection slightly based on risk classification.
+            # Kept small: this feeds back into the next iteration's
+            # prediction, so a large nudge is a self-fulfilling runaway.
+            if clf["risk_level"] == "high":
+                current_temp = current_temp + 0.15
+                current_hum = current_hum + 0.3
+            elif clf["risk_level"] == "low":
+                current_temp = current_temp - 0.1
+                current_hum = current_hum - 0.2
 
         forecast_time = anchor_time + timedelta(hours=hour)
         # Ensure recorded_at is a string in ISO format
@@ -280,13 +248,25 @@ async def get_forecast(silo_id: uuid.UUID):
             "humidity": round(float(current_hum), 2),
         })
 
-        if first_crossing is None and predicted_risk_level in ("medium", "high"):
-            first_crossing = {
-                "risk_level": predicted_risk_level,
-                "risk_score": _RISK_TO_SCORE[predicted_risk_level],
-                "hours_ahead": hour,
-                "predicted_for": forecast_time,
-            }
+        # A crossing needs TWO consecutive risky points before it alerts —
+        # the XGBoost decision surface is jagged (e.g. a lone "high" pocket at
+        # T≈19°C/H≈55% amid "medium" neighbours), and a single projected point
+        # inside such a pocket is noise, not a trend. The alerted level is the
+        # *lower* of the pair, so one spiky "high" among "medium"s reads medium.
+        if first_crossing is None:
+            if predicted_risk_level in ("medium", "high"):
+                if prev_risky is not None and prev_risky["hour"] == hour - 1:
+                    level = "high" if prev_risky["level"] == "high" and predicted_risk_level == "high" else "medium"
+                    first_crossing = {
+                        "risk_level": level,
+                        "risk_score": RISK_TO_SCORE[level],
+                        "hours_ahead": prev_risky["hour"],
+                        "predicted_for": prev_risky["time"],
+                    }
+                else:
+                    prev_risky = {"hour": hour, "level": predicted_risk_level, "time": forecast_time}
+            else:
+                prev_risky = None
 
     if first_crossing is not None:
         await _raise_predictive_alert(db, silo_id, silo, first_crossing)
@@ -303,18 +283,24 @@ async def _raise_predictive_alert(db, silo_id: uuid.UUID, silo, crossing: Dict[s
             f"in ~{crossing['hours_ahead']}h (forecast risk score: {crossing['risk_score']}%)."
         )
         # Dedup in the same statement as the insert (concurrent forecast polls
-        # race a separate check-then-insert). Keyed on predicted_for > NOW()
-        # rather than is_read: clients auto-ack alerts on display, so an
-        # is_read key would re-raise the same standing prediction after every
-        # ack. A prediction "stands" until its horizon passes; only then may a
-        # new crossing alert again.
+        # race a separate check-then-insert). Two guards:
+        # - an UNREAD standing prediction blocks re-raising (ingest resolves it
+        #   by marking read when readings recover, which re-opens alerting for
+        #   a genuinely new deterioration), and
+        # - a 1h rate-limit on ANY predicted alert, because clients auto-ack
+        #   alerts on display — without it every ack would permit an immediate
+        #   duplicate on the next forecast poll.
         alert_row = await db.fetchrow(
             """
             INSERT INTO alerts (silo_id, risk_level, risk_score, message, kind, predicted_for)
             SELECT $1, $2, $3, $4, 'predicted', $5
             WHERE NOT EXISTS (
                 SELECT 1 FROM alerts
-                WHERE silo_id = $1 AND kind = 'predicted' AND predicted_for > NOW()
+                WHERE silo_id = $1 AND kind = 'predicted'
+                  AND (
+                    (predicted_for > NOW() AND is_read = FALSE)
+                    OR triggered_at > NOW() - INTERVAL '1 hour'
+                  )
             )
             RETURNING id, triggered_at
             """,
@@ -328,13 +314,12 @@ async def _raise_predictive_alert(db, silo_id: uuid.UUID, silo, crossing: Dict[s
             return
 
         from app.ws.alerts import manager
-        severity_map = {"high": "critical", "medium": "warning", "low": "info"}
         await manager.broadcast({
             "silo_id": str(silo_id),
             "silo_name": silo["name"],
             "risk_level": crossing["risk_level"],
             "risk_score": crossing["risk_score"],
-            "severity": severity_map.get(crossing["risk_level"], "info"),
+            "severity": SEVERITY_MAP.get(crossing["risk_level"], "info"),
             "message": message,
             "timestamp": str(alert_row["triggered_at"]),
             "read": False,

@@ -20,10 +20,11 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 INTERVAL_SECONDS = 20 * 60
 
 
-def discover_silos(client: httpx.Client) -> list[str]:
+def discover_silos(client: httpx.Client) -> dict[str, str | None]:
+    """Returns {silo_id: location} — location drives the regional climate offset."""
     response = client.get(f"{BACKEND_URL}/silos", timeout=10.0)
     response.raise_for_status()
-    return [silo["id"] for silo in response.json()]
+    return {silo["id"]: silo.get("location") for silo in response.json()}
 
 
 def main() -> None:
@@ -38,8 +39,8 @@ def main() -> None:
                 time.sleep(INTERVAL_SECONDS)
                 continue
 
-            for silo_id in silo_ids:
-                states.setdefault(silo_id, new_state())
+            for silo_id, location in silo_ids.items():
+                states.setdefault(silo_id, new_state(location))
             for stale_id in [sid for sid in states if sid not in silo_ids]:
                 del states[stale_id]
 

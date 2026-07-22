@@ -3,6 +3,10 @@ from typing import Optional
 from datetime import datetime
 
 
+class SiloClaim(BaseModel):
+    code: str
+
+
 class SiloCreate(BaseModel):
     name: str
     location: Optional[str] = None

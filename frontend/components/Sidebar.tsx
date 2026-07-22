@@ -57,6 +57,14 @@ const NAV: NavItem[] = [
   },
   {
     type: "link" as const,
+    href: "/soil-encyclopedia",
+    label: "Soil Encyclopedia",
+    sub: "REFERENCE",
+    icon: <BookOpen size={14} />,
+    match: (p: string) => p.startsWith("/soil-encyclopedia"),
+  },
+  {
+    type: "link" as const,
     href: "/diseases",
     label: "Disease Encyclopedia",
     sub: "REFERENCE",

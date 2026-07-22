@@ -10,10 +10,11 @@ import React, {
 } from "react";
 import axios from "axios";
 import { API_BASE, WS_URL } from "@/lib/api";
+import { SEVERITY_MAP, type AlertSeverity } from "@/lib/severity";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type AlertSeverity = "critical" | "warning" | "info";
+export type { AlertSeverity };
 
 export interface Alert {
   id: string;
@@ -36,12 +37,6 @@ interface AlertContextValue {
 // ─── Context ─────────────────────────────────────────────────────────────────
 
 const AlertContext = createContext<AlertContextValue | null>(null);
-
-const SEVERITY_MAP: Record<string, AlertSeverity> = {
-  high: "critical",
-  medium: "warning",
-  low: "info",
-};
 
 export function useAlerts(): AlertContextValue {
   const ctx = useContext(AlertContext);

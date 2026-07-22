@@ -34,7 +34,7 @@ async def backfill() -> None:
 
     conn = await asyncpg.connect(dsn)
     try:
-        silos = await conn.fetch("SELECT id, name FROM silos ORDER BY created_at")
+        silos = await conn.fetch("SELECT id, name, location FROM silos ORDER BY created_at")
         if not silos:
             print("No silos found - nothing to backfill.")
             return
@@ -43,7 +43,7 @@ async def backfill() -> None:
         total_steps = (HOURS_OF_HISTORY * 60) // INTERVAL_MINUTES
 
         for silo in silos:
-            state = new_state()
+            state = new_state(silo["location"])
             rows = []
             # Oldest first so the walk drifts forward naturally into "now".
             for i in range(total_steps, -1, -1):

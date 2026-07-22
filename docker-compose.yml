@@ -41,7 +41,6 @@ services:
         condition: service_started
     volumes:
       - ./uploads:/app/uploads
-      - ./ai-predictive/app/model/weights:/app/ai-predictive/app/model/weights:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"

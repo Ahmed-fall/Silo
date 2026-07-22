@@ -32,17 +32,6 @@ async def register(payload: UserRegister):
         payload.preferred_language,
     )
 
-    # Mock onboarding: until the government "install silo + hand farmer a
-    # claim code" flow ships, give every new farmer 1-2 unclaimed demo silos
-    # so their dashboard isn't empty on first login.
-    await db.execute(
-        """
-        UPDATE silos SET owner_id = $1
-        WHERE id IN (SELECT id FROM silos WHERE owner_id IS NULL ORDER BY created_at LIMIT 2)
-        """,
-        row["id"],
-    )
-
     token = create_access_token(row["id"])
     return TokenResponse(access_token=token, user=UserResponse(**dict(row)))
 

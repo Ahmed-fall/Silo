@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from app.core.database import get_db
+from app.api.silos import resolve_condition
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -27,27 +28,32 @@ async def get_silo_pdf_report(silo_id: uuid.UUID):
     so this renders the same information as a real downloadable PDF."""
     db = await get_db()
 
-    silo = await db.fetchrow(
+    row = await db.fetchrow(
         """
         SELECT
             s.id, s.name, s.location, s.capacity_kg, s.crop_type, s.created_at,
             sr.temperature, sr.humidity, sr.soil_moisture, sr.ndvi,
-            a.risk_level, a.risk_score
+            a.risk_level, a.risk_score,
+            (a.triggered_at > NOW() - INTERVAL '6 hours') AS alert_recent
         FROM silos s
         LEFT JOIN LATERAL (
             SELECT temperature, humidity, soil_moisture, ndvi
             FROM sensor_readings WHERE silo_id = s.id ORDER BY recorded_at DESC LIMIT 1
         ) sr ON true
         LEFT JOIN LATERAL (
-            SELECT risk_level, risk_score
-            FROM alerts WHERE silo_id = s.id ORDER BY triggered_at DESC LIMIT 1
+            SELECT risk_level, risk_score, triggered_at
+            FROM alerts WHERE silo_id = s.id AND kind = 'measured' ORDER BY triggered_at DESC LIMIT 1
         ) a ON true
         WHERE s.id = $1
         """,
         silo_id,
     )
-    if not silo:
+    if not row:
         raise HTTPException(status_code=404, detail="Silo not found")
+    # Same live-condition rule as GET /silos and GET /users/me/silos — a
+    # report generated today must not show a risk level frozen from a
+    # measured alert that's since resolved.
+    silo = await resolve_condition(dict(row))
 
     alerts = await db.fetch(
         "SELECT risk_level, risk_score, message, triggered_at FROM alerts "
