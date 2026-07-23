@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import init_db, close_db
-from app.api import silos, sensors, images, alerts, chat, treatments, soil
+from app.api import silos, sensors, images, alerts, chat, treatments, soil, auth, users, devices, reports
 from app.ws.alerts import manager
 
 @asynccontextmanager
@@ -34,6 +34,10 @@ app.include_router(alerts.router)
 app.include_router(chat.router)
 app.include_router(treatments.router)
 app.include_router(soil.router)
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(devices.router)
+app.include_router(reports.router)
 
 @app.websocket("/ws/alerts")
 async def websocket_alerts(websocket: WebSocket):
@@ -46,6 +50,24 @@ async def websocket_alerts(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {e}")
         manager.disconnect(websocket)
+
+
+@app.get("/")
+async def service_index():
+    return {
+        "status": "ok",
+        "service": "backend",
+        "message": "Silo backend is running.",
+        "links": {
+            "frontend": "http://localhost:3000",
+            "backend_docs": "http://localhost:8000/docs",
+            "backend_health": "http://localhost:8000/health",
+            "ai_vision_health": "http://localhost:8001/health",
+            "ai_predictive_health": "http://localhost:8002/health",
+            "ai_soil_health": "http://localhost:8003/health",
+            "alerts_websocket": "ws://localhost:8000/ws/alerts",
+        },
+    }
 
 
 @app.get("/health")

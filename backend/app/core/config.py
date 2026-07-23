@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     # Storage
     uploads_dir: str = "./uploads"
 
+    # Auth (mobile app)
+    jwt_secret: str = "silo-dev-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_access_expire_minutes: int = 60 * 24 * 7  # 7 days, farmer-friendly (rural connectivity)
+
+    # Push notifications (mobile app). Optional — if unset, push is a no-op and
+    # only the existing websocket alert stream fires.
+    fcm_server_key: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"),
         extra="ignore"

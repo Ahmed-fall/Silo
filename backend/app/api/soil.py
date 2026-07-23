@@ -1,10 +1,19 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from app.core.config import settings
+from app.data.soil_protocols import SOIL_PROTOCOLS
+from typing import Dict, Any
 import httpx
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/soil", tags=["soil"])
+
+
+@router.get("/encyclopedia", response_model=Dict[str, Any])
+async def get_soil_encyclopedia():
+    """Reference content for the mobile app's Soil Encyclopedia screen —
+    mirrors the pattern of GET /treatments/all for wheat diseases."""
+    return SOIL_PROTOCOLS
 
 
 @router.post("/analyze")

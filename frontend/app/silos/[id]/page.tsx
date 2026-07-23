@@ -5,12 +5,14 @@ import { useParams } from "next/navigation";
 import axios from "axios";
 import { motion, useAnimationControls, AnimatePresence } from "framer-motion";
 import { API_BASE } from "@/lib/api";
+import { SEVERITY_MAP } from "@/lib/severity";
 import CropIcon from "@/components/CropIcon";
 import SensorChart, { type SensorReading } from "@/components/SensorChart";
 import AIVisionScanner from "@/components/AIVisionScanner";
 import {
   Thermometer, Droplets, AlertTriangle, ShieldCheck, Flame,
   RefreshCw, ArrowLeft, MapPin, ShieldAlert, Clock, Download,
+  KeyRound, Copy, Check,
 } from "lucide-react";
 import Link from "next/link";
 import ThermalSiloMap, { type ThermalZone } from "@/components/ThermalSiloMap";
@@ -33,58 +35,27 @@ interface SiloAlert {
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
-function makeMockSensor(n = 24): SensorReading[] {
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date(Date.now() - (n - i) * 3_600_000);
-    return {
-      recorded_at: d.toISOString(),
-      temperature: 22 + Math.sin(i / 3) * 6 + Math.random() * 2,
-      humidity:    58 + Math.cos(i / 4) * 12 + Math.random() * 3,
-    };
-  });
-}
-
-function generateMockForecast(history: SensorReading[], hours = 12): SensorReading[] {
-  if (history.length === 0) return [];
-  const last = history[history.length - 1];
-  let temp = last.temperature;
-  let hum = last.humidity;
-  return Array.from({ length: hours }, (_, i) => {
-    temp = temp + (Math.random() - 0.48) * 1.4;
-    hum = hum + (Math.random() - 0.48) * 1.8;
-    const t = new Date(last.recorded_at);
-    t.setHours(t.getHours() + i + 1);
-    return {
-      recorded_at: t.toISOString(),
-      temperature: parseFloat(temp.toFixed(2)),
-      humidity: parseFloat(hum.toFixed(2)),
-    };
-  });
-}
-
 const MOCK_SILO: SiloDetail = {
   id: "s-001", name: "Alpha Depot", location: "Cairo Governorate, EG",
   risk_level: "medium", crop_type: "wheat",
   temperature: 28.4, humidity: 71.2, capacity_kg: 500000, fill_pct: 68,
 };
 
-const MOCK_ALERTS: SiloAlert[] = [
-  { id: "a1", message: "Temperature exceeded 28 °C threshold", risk_level: "medium", triggered_at: new Date(Date.now() - 600_000).toISOString(), is_read: false },
-  { id: "a2", message: "Humidity spike detected — 78 %", risk_level: "high", triggered_at: new Date(Date.now() - 1_800_000).toISOString(), is_read: false },
-  { id: "a3", message: "Scheduled ventilation cycle complete", risk_level: "low", triggered_at: new Date(Date.now() - 3_600_000).toISOString(), is_read: true },
-  { id: "a4", message: "Sensor calibration recommended", risk_level: "low", triggered_at: new Date(Date.now() - 7_200_000).toISOString(), is_read: true },
-];
-
 // ─── Thermal zone builder ────────────────────────────────────────────────────
 
 function buildThermalZones(temp?: number, humidity?: number): ThermalZone[] {
-  const base    = temp ?? 27;
-  const hFactor = ((humidity ?? 65) - 50) / 100;
+  // Zones bracket the measured core reading so their mean ≈ the sensor value
+  // (the old version painted the reading as the *minimum*, exaggerating heat
+  // by +5.5°C at the base). Stratification widens with humidity — moisture
+  // migration is what drives hotspot formation at the bottom of a grain mass.
+  const base   = temp ?? 27;
+  const spread = 2.5 + Math.max(0, ((humidity ?? 55) - 50) / 50) * 2.5; // 2.5–5°C
+  const r = (v: number) => parseFloat(v.toFixed(1));
   return [
-    { label: "Top",    temp: parseFloat((base - 5 + hFactor).toFixed(1)),          heightFraction: 0.24 },
-    { label: "Upper",  temp: parseFloat((base - 1.5 + hFactor * 1.2).toFixed(1)), heightFraction: 0.26 },
-    { label: "Lower",  temp: parseFloat((base + 2 + hFactor * 1.5).toFixed(1)),   heightFraction: 0.26 },
-    { label: "Bottom", temp: parseFloat((base + 5.5 + hFactor * 2).toFixed(1)),   heightFraction: 0.24 },
+    { label: "Top",    temp: r(base - spread),     heightFraction: 0.24 },
+    { label: "Upper",  temp: r(base - spread / 3), heightFraction: 0.26 },
+    { label: "Lower",  temp: r(base + spread / 3), heightFraction: 0.26 },
+    { label: "Bottom", temp: r(base + spread),     heightFraction: 0.24 },
   ];
 }
 
@@ -125,7 +96,17 @@ function SensorWidget({ icon, label, value, unit }: {
   );
 }
 
-function CapacityWidget({ pct }: { pct: number }) {
+function CapacityWidget({ pct }: { pct?: number }) {
+  // No fill telemetry exists yet (no fill sensor in the backend) — show "--"
+  // rather than a fabricated 0%, matching the live-map's convention.
+  if (pct == null) {
+    return (
+      <div className="flex flex-col gap-1.5 px-4 py-3.5 rounded-2xl glass-tactical items-center justify-center">
+        <div className="flex items-center gap-1.5 text-[10px] font-plus-jakarta uppercase tracking-widest self-start" style={{ color: "var(--text-secondary)" }}>Fill Level</div>
+        <p className="font-outfit font-extrabold text-2xl" style={{ color: "var(--text-muted)" }}>--</p>
+      </div>
+    );
+  }
   const clamped = Math.max(0, Math.min(100, pct));
   const theme =
     clamped < 50  ? { wave: "#22d3ee", wave2: "#06b6d4", text: "#0891b2",  glow: "rgba(6,182,212,0.45)" } :
@@ -163,8 +144,7 @@ function CapacityWidget({ pct }: { pct: number }) {
 }
 
 function AlertRow({ alert }: { alert: SiloAlert }) {
-  const severityMap: Record<string, keyof typeof SEV> = { low: "info", medium: "warning", high: "critical" };
-  const sevKey = (severityMap[alert.risk_level?.toLowerCase()] || "info") as keyof typeof SEV;
+  const sevKey = (SEVERITY_MAP[alert.risk_level?.toLowerCase()] || "info") as keyof typeof SEV;
   const s      = SEV[sevKey] || SEV.info;
   const dateObj = new Date(alert.triggered_at);
   const time    = !isNaN(dateObj.getTime())
@@ -204,30 +184,40 @@ export default function SiloDetailPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const timeout = 2_000;
+    const timeout = 8_000;
+    // Symmetric window: 12h measured history + 12h forecast (the model's
+    // full horizon — /sensors/forecast always projects exactly 12h ahead,
+    // so this uses it in full rather than truncating). "Now" sits at the
+    // center of the chart, not wherever the last available reading happens
+    // to fall — see SensorChart's real-time axis + NOW reference line.
+    const historySince = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
     const [s, sens, al, fc] = await Promise.allSettled([
       axios.get<SiloDetail>(`${API_BASE}/silos/${id}`, { timeout }),
-      axios.get<SensorReading[]>(`${API_BASE}/sensors/${id}`, { timeout }),
+      // Server returns newest-first; reversed below to chronological order.
+      axios.get<SensorReading[]>(`${API_BASE}/sensors/${id}?since=${encodeURIComponent(historySince)}`, { timeout }),
       axios.get<SiloAlert[]>(`${API_BASE}/alerts/${id}`, { timeout }),
-      axios.get<SensorReading[]>(`${API_BASE}/ai-predictive/forecast/${id}`, { timeout }),
+      axios.get<SensorReading[]>(`${API_BASE}/sensors/forecast/${id}`, { timeout }),
     ]);
+    // Data states must hold ONLY what the API returned for this silo — no
+    // mock fallbacks: the PDF report is built from these states, and fake
+    // alerts/curves stamped with a real silo's registry ID would be lies.
     const siloData = s.status === "fulfilled" ? s.value.data : { ...MOCK_SILO, id: id ?? MOCK_SILO.id };
-    const sensorsData = sens.status === "fulfilled" ? sens.value.data : makeMockSensor(24);
-    
+    const sensorsData = sens.status === "fulfilled" ? [...sens.value.data].reverse() : [];
+
     setSilo(siloData);
     setSensors(sensorsData);
-    setAlerts(al.status === "fulfilled" 
+    setAlerts(al.status === "fulfilled"
       ? al.value.data.map((a: SiloAlert) => ({
           ...a,
           risk_level: (a.risk_level ?? "low") as RiskLevel,
           triggered_at: a.triggered_at,
           is_read: a.is_read ?? false,
         }))
-      : MOCK_ALERTS
+      : []
     );
 
     // Compute forecast in parent so both screen SensorChart and handlePrint share the exact same dataset
-    const forecastData = fc.status === "fulfilled" ? fc.value.data : generateMockForecast(sensorsData, 12);
+    const forecastData = fc.status === "fulfilled" ? fc.value.data : [];
     setForecast(forecastData);
 
     // Always end with setLoading(false)
@@ -238,23 +228,58 @@ export default function SiloDetailPage() {
 
   async function handleRefresh() { setIsRefreshing(true); await fetchAll(); setIsRefreshing(false); }
 
+  // ── Farmer claim code (government hands this to the silo's farmer) ────────
+  const [claimCode, setClaimCode] = useState<string | null>(null);
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimCopied, setClaimCopied] = useState(false);
+
+  async function copyClaimCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      setClaimCopied(true);
+      setTimeout(() => setClaimCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable (non-HTTPS remote) — code stays visible to copy manually */
+    }
+  }
+
+  async function handleClaimCode() {
+    if (claimBusy) return;
+    if (claimCode) { await copyClaimCode(claimCode); return; }
+    setClaimBusy(true);
+    try {
+      const { data } = await axios.post<{ claim_code: string }>(`${API_BASE}/silos/${id}/claim-code`);
+      setClaimCode(data.claim_code);
+      await copyClaimCode(data.claim_code);
+    } catch (err) {
+      console.warn("[SiloDetail] claim-code fetch failed", err);
+    } finally {
+      setClaimBusy(false);
+    }
+  }
+
   // ── PDF Report ────────────────────────────────────────────────────────────
   const [isPrinting, setIsPrinting] = useState(false);
   function handlePrint() {
     setIsPrinting(true);
     const dateStr = new Date().toLocaleString([], { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
     
-    // Dynamic diagnostic summaries
+    // Dynamic diagnostic summaries — report only measured values; anything
+    // the backend has no telemetry for renders as "—", never a fabricated 0.
     const riskKey = (silo?.risk_level?.toLowerCase() || "none") as RiskLevel;
     const risk = RISK[riskKey] || RISK.none;
-    const calculatedGrainMass = silo 
-      ? Math.round((silo.capacity_kg ?? 0) * (silo.fill_pct ?? 0) / 100).toLocaleString() 
-      : "0";
-    
+    const hasReading = silo?.temperature != null;
+    const calculatedGrainMass = silo && silo.fill_pct != null && silo.capacity_kg != null
+      ? Math.round(silo.capacity_kg * silo.fill_pct / 100).toLocaleString()
+      : null;
+
     let aiHeadline = "NOMINAL PRESERVATION CONDITIONS";
     let aiDescription = `Storage facility #${silo?.id?.toUpperCase() || ""} environment is verified safe. Core temperature and humidity readings reside comfortably within optimal botanical preservation boundaries for crop specimen: ${silo?.crop_type || ""}. No action required.`;
-    
-    if (riskKey === "high") {
+
+    if (!hasReading) {
+      aiHeadline = "AWAITING SENSOR TELEMETRY";
+      aiDescription = `Storage facility #${silo?.id?.toUpperCase() || ""} has not reported sensor readings yet. Environmental diagnostics, thermal analysis and risk assessment will become available once the sensor array comes online.`;
+    } else if (riskKey === "high") {
       aiHeadline = "CRITICAL BREACH STATE DETECTED";
       aiDescription = `Environmental thresholds have been severely compromised at #${silo?.id?.toUpperCase() || ""}. Temperature is recorded at ${silo?.temperature?.toFixed(1) || "0.0"}°C and relative humidity at ${silo?.humidity?.toFixed(1) || "0.0"}%. Prompt administrative action, ventilation activation, and crop salvage protocols are required immediately.`;
     } else if (riskKey === "medium") {
@@ -337,7 +362,11 @@ export default function SiloDetailPage() {
     const topTheme = tempTheme(zones[0].temp);
     const bottomTheme = tempTheme(zones[zones.length - 1].temp);
 
-    const thermalTwinHtml = `
+    const thermalTwinHtml = !hasReading ? `
+      <div style="background: rgba(164, 130, 89, 0.04); border: 1px dashed rgba(164, 130, 89, 0.25); padding: 24px; font-size: 8.5pt; color: #6B5E4E; text-align: center;">
+        Awaiting sensor data — thermal stratification analysis becomes available once this silo reports its first reading.
+      </div>
+    ` : `
       <div class="twin-container">
         <!-- Silo Cylinder Visual -->
         <div class="silo-visual">
@@ -386,22 +415,28 @@ export default function SiloDetailPage() {
     `;
 
     // ── Static SVG Vector Chart Compiler ──
+    // Strictly the data the page fetched for THIS silo — an official report
+    // must never draw mock curves when a silo has no readings.
     const allReadings = [...sensors];
     const forecastReadings = [...forecast];
-    if (allReadings.length === 0) {
-      allReadings.push(...makeMockSensor(24));
-    }
-    
+
     const svgW = 550;
     const svgH = 135;
     const paddingLeft = 32;
     const paddingRight = 32;
     const paddingTop = 15;
     const paddingBottom = 15;
-    const totalPoints = allReadings.length + forecastReadings.length;
 
-    const getX = (idx: number, total: number) => paddingLeft + (idx / (total - 1)) * (svgW - paddingLeft - paddingRight);
-    
+    // Real-time x-axis, mirroring the live SensorChart fix: history is ~20min
+    // apart and forecast ~1h apart (and real data can have arbitrary gaps,
+    // e.g. downtime) — plotting by array index instead of actual elapsed
+    // time draws all of that as evenly spaced, which misrepresents it.
+    const allTimesMs = [...allReadings, ...forecastReadings].map((r) => new Date(r.recorded_at).getTime());
+    const minTimeMs = Math.min(...allTimesMs);
+    const maxTimeMs = Math.max(...allTimesMs);
+    const timeSpanMs = maxTimeMs - minTimeMs || 1;
+    const getXForTime = (ms: number) => paddingLeft + ((ms - minTimeMs) / timeSpanMs) * (svgW - paddingLeft - paddingRight);
+
     const getTempY = (val: number) => {
       const minT = 10;
       const maxT = 45;
@@ -416,12 +451,12 @@ export default function SiloDetailPage() {
 
     let tempHistoricPath = "";
     let humHistoricPath = "";
-    
+
     allReadings.forEach((r, idx) => {
-      const x = getX(idx, totalPoints);
+      const x = getXForTime(new Date(r.recorded_at).getTime());
       const ty = getTempY(r.temperature ?? 0);
       const hy = getHumY(r.humidity ?? 0);
-      
+
       if (idx === 0) {
         tempHistoricPath += `M ${x} ${ty}`;
         humHistoricPath += `M ${x} ${hy}`;
@@ -430,32 +465,36 @@ export default function SiloDetailPage() {
         humHistoricPath += ` L ${x} ${hy}`;
       }
     });
-    
+
     let tempForecastPath = "";
     let humForecastPath = "";
-    
-    if (forecastReadings.length > 0) {
-      const startIdx = allReadings.length - 1;
-      const startX = getX(startIdx, totalPoints);
-      const startR = allReadings[startIdx];
-      
+
+    if (forecastReadings.length > 0 && allReadings.length > 0) {
+      const startR = allReadings[allReadings.length - 1];
+      const startX = getXForTime(new Date(startR.recorded_at).getTime());
+
       tempForecastPath = `M ${startX} ${getTempY(startR.temperature ?? 0)}`;
       humForecastPath = `M ${startX} ${getHumY(startR.humidity ?? 0)}`;
-      
-      forecastReadings.forEach((r, idx) => {
-        const pointIdx = allReadings.length + idx;
-        const x = getX(pointIdx, totalPoints);
+
+      forecastReadings.forEach((r) => {
+        const x = getXForTime(new Date(r.recorded_at).getTime());
         const ty = getTempY(r.temperature ?? 0);
         const hy = getHumY(r.humidity ?? 0);
-        
+
         tempForecastPath += ` L ${x} ${ty}`;
         humForecastPath += ` L ${x} ${hy}`;
       });
     }
 
-    const dividerX = getX(allReadings.length - 1, totalPoints);
+    const dividerX = allReadings.length > 0
+      ? getXForTime(new Date(allReadings[allReadings.length - 1].recorded_at).getTime())
+      : paddingLeft;
 
-    const sensorChartHtml = `
+    const sensorChartHtml = allReadings.length === 0 ? `
+      <div class="chart-container" style="padding: 24px; font-size: 8.5pt; color: #6B5E4E; text-align: center; border: 1px dashed rgba(164, 130, 89, 0.25); background: rgba(164, 130, 89, 0.04);">
+        No sensor readings recorded for this storage asset yet — history and forecast charting will appear once telemetry begins.
+      </div>
+    ` : `
       <div class="chart-container">
         <svg viewBox="0 0 ${svgW} ${svgH}" class="chart-svg">
           <!-- Horizontal Grid Lines -->
@@ -478,7 +517,7 @@ export default function SiloDetailPage() {
           ${forecastReadings.length > 0 ? `
             <line x1="${dividerX}" y1="5" x2="${dividerX}" y2="${svgH - 5}" stroke="rgba(164, 130, 89, 0.35)" stroke-dasharray="3,3" stroke-width="1" />
             <text x="${dividerX - 6}" y="12" class="chart-boundary-text" text-anchor="end">HISTORIC LOGS</text>
-            <text x="${dividerX + 6}" y="12" class="chart-boundary-text">AI FORECAST (72H)</text>
+            <text x="${dividerX + 6}" y="12" class="chart-boundary-text">AI FORECAST (12H)</text>
           ` : ""}
 
           <!-- Historic curves -->
@@ -1096,17 +1135,17 @@ export default function SiloDetailPage() {
                 </span>
               </div>
             </div>
-            <div class="metric-card ${silo?.temperature && silo.temperature > 28 ? "warning" : ""}">
+            <div class="metric-card ${silo?.temperature != null && silo.temperature > 28 ? "warning" : ""}">
               <div class="metric-label">Core Temperature</div>
-              <div class="metric-value">${silo?.temperature?.toFixed(1) || "0.0"}<span>°C</span></div>
+              <div class="metric-value">${silo?.temperature != null ? `${silo.temperature.toFixed(1)}<span>°C</span>` : "—"}</div>
             </div>
-            <div class="metric-card ${silo?.humidity && silo.humidity > 70 ? "alert" : ""}">
+            <div class="metric-card ${silo?.humidity != null && silo.humidity > 70 ? "alert" : ""}">
               <div class="metric-label">Relative Humidity</div>
-              <div class="metric-value">${silo?.humidity?.toFixed(1) || "0.0"}<span>%</span></div>
+              <div class="metric-value">${silo?.humidity != null ? `${silo.humidity.toFixed(1)}<span>%</span>` : "—"}</div>
             </div>
             <div class="metric-card">
               <div class="metric-label">Current Capacity</div>
-              <div class="metric-value">${silo?.fill_pct || 0}<span>%</span></div>
+              <div class="metric-value">${silo?.fill_pct != null ? `${silo.fill_pct}<span>%</span>` : "—"}</div>
             </div>
           </div>
 
@@ -1114,13 +1153,17 @@ export default function SiloDetailPage() {
             <div class="metric-card">
               <div class="meta-label" style="margin-bottom: 1px;">Calculated Grain Mass</div>
               <div class="metric-value" style="font-size: 13pt;">
-                ${calculatedGrainMass} <span style="font-size: 9pt; font-weight: 500;">kg</span>
+                ${calculatedGrainMass != null
+                  ? `${calculatedGrainMass} <span style="font-size: 9pt; font-weight: 500;">kg</span>`
+                  : `<span style="font-size: 9pt; color: #6B5E4E;">— no fill telemetry</span>`}
               </div>
             </div>
             <div class="metric-card">
               <div class="meta-label" style="margin-bottom: 1px;">Total Storage Limit</div>
               <div class="metric-value" style="font-size: 13pt; color: #6B5E4E;">
-                ${silo?.capacity_kg?.toLocaleString() || "0"} <span style="font-size: 9pt; font-weight: 500;">kg</span>
+                ${silo?.capacity_kg != null
+                  ? `${silo.capacity_kg.toLocaleString()} <span style="font-size: 9pt; font-weight: 500;">kg</span>`
+                  : "—"}
               </div>
             </div>
           </div>
@@ -1311,7 +1354,29 @@ export default function SiloDetailPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-outfit font-bold text-sm capitalize truncate" style={{ color: "var(--text-primary)" }}>{silo?.crop_type}</p>
-                <p className="font-plus-jakarta text-[10px]" style={{ color: "var(--text-muted)" }}>#{silo?.id.toUpperCase()}</p>
+                <button
+                  onClick={handleClaimCode}
+                  title={claimCode ? "Click to copy the farmer claim code" : "Tap to generate this silo's farmer claim code"}
+                  className="flex items-center gap-1.5 mt-0.5 group cursor-pointer max-w-full"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {claimCode ? (
+                    <>
+                      <span className="font-mono text-[11px] font-bold tracking-widest px-1.5 py-0.5 rounded-md"
+                        style={{ color: "var(--accent)", backgroundColor: "var(--accent-subtle)", border: "1px solid var(--border-glass)" }}>
+                        {claimCode}
+                      </span>
+                      {claimCopied
+                        ? <span className="flex items-center gap-1 text-[9px] font-semibold" style={{ color: "var(--accent)" }}><Check size={10} /> Copied</span>
+                        : <Copy size={10} className="opacity-60 group-hover:opacity-100" />}
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-plus-jakarta text-[10px] truncate">#{silo?.id.toUpperCase()}</span>
+                      <KeyRound size={10} className={`shrink-0 opacity-50 group-hover:opacity-100 ${claimBusy ? "animate-pulse" : ""}`} />
+                    </>
+                  )}
+                </button>
               </div>
               <motion.span
                 animate={risk.pulse ? { boxShadow: [`0 0 0px ${risk.glow}`, `0 0 14px 3px ${risk.peak}`, `0 0 0px ${risk.glow}`] } : { boxShadow: `0 0 0px ${risk.glow}` }}
@@ -1324,7 +1389,7 @@ export default function SiloDetailPage() {
             </div>
             <SensorWidget icon={<Thermometer size={11} style={{ color: "#f59e0b" }} />} label="Temperature" value={silo?.temperature ?? 0} unit="°C" />
             <SensorWidget icon={<Droplets size={11} style={{ color: "#0ea5e9" }} />}    label="Humidity"    value={silo?.humidity ?? 0}    unit="%" />
-            <CapacityWidget pct={silo?.fill_pct ?? 0} />
+            <CapacityWidget pct={silo?.fill_pct} />
           </div>
       }
 
@@ -1345,7 +1410,15 @@ export default function SiloDetailPage() {
         <div className="rounded-2xl glass-tactical p-5">
           {loading
             ? <Skeleton className="h-56 w-full" />
-            : <ThermalSiloMap title="Thermal Digital Twin" zones={buildThermalZones(silo?.temperature, silo?.humidity)} />
+            : silo?.temperature == null
+              ? <div className="flex flex-col items-center justify-center h-56 gap-2">
+                  <Thermometer size={20} style={{ color: "var(--text-muted)" }} />
+                  <p className="font-outfit text-sm" style={{ color: "var(--text-secondary)" }}>Awaiting sensor data</p>
+                  <p className="font-plus-jakarta text-[11px]" style={{ color: "var(--text-muted)" }}>
+                    The thermal twin activates once this silo reports its first reading.
+                  </p>
+                </div>
+              : <ThermalSiloMap title="Thermal Digital Twin" zones={buildThermalZones(silo.temperature, silo.humidity)} />
           }
         </div>
       </section>

@@ -2,7 +2,7 @@ services:
 
   db:
     image: postgres:15
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -19,62 +19,144 @@ services:
 
   backend:
     build: ./backend
-    restart: always
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file: .env
     environment:
       POSTGRES_HOST: db
+      AI_VISION_URL: http://ai-vision:8001
+      AI_PREDICTIVE_URL: http://ai-predictive:8002
       AI_SOIL_URL: http://ai-soil:8003
-      OLLAMA_URL: http://172.18.0.1:11434
-      DATABASE_URL: postgresql://silo_user:silo_pass@db:5432/silo_db
+      OLLAMA_URL: http://host.docker.internal:11434
+      UPLOADS_DIR: /app/uploads
     depends_on:
       db:
         condition: service_healthy
+      ai-vision:
+        condition: service_started
+      ai-predictive:
+        condition: service_started
+      ai-soil:
+        condition: service_started
     volumes:
       - ./uploads:/app/uploads
-      - ./ai-predictive/app/model/weights:/ai-predictive/app/model/weights
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   ai-vision:
     build: ./ai-vision
-    restart: always
+    restart: unless-stopped
     ports:
       - "8001:8001"
     volumes:
       - ./uploads:/app/uploads
-      - ./ai-vision/app/model/weights:/app/app/model/weights
+      - ./ai-vision/app/model/weights:/app/app/model/weights:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2).read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   ai-predictive:
     build: ./ai-predictive
-    restart: always
+    restart: unless-stopped
     ports:
       - "8002:8002"
-    # OPTIONAL: If the ai-predictive service container also needs to read these weights internally,
-    # uncomment the lines below:
-    # volumes:
-    #   - ./ai-predictive/app/model/weights:/app/app/model/weights
+    volumes:
+      - ./ai-predictive/app/model/weights:/app/app/model/weights:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8002
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=2).read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   ai-soil:
     build: ./ai-soil
-    restart: always
+    restart: unless-stopped
     ports:
       - "8003:8003"
+    volumes:
+      - ./ai-soil/app/model/weights:/app/app/model/weights:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8003
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=2).read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   frontend:
-    build: ./frontend
-    restart: always
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_OLLAMA_MODEL: ${OLLAMA_MODEL}
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_OLLAMA_MODEL: ${OLLAMA_MODEL}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    command: npm start -- -H 0.0.0.0 -p 3000
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  seed:
+    image: silo-backend
+    profiles:
+      - tools
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      UPLOADS_DIR: /app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+    command: python /scripts/comprehensive_seed.py
+
+  simulate:
+    image: silo-backend
+    profiles:
+      - tools
+    environment:
+      BACKEND_URL: http://backend:8000
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+    command: python /scripts/simulate_sensor.py
+
+  backfill-sensors:
+    image: silo-backend
+    profiles:
+      - tools
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+    command: python /scripts/backfill_sensor_history.py
 
 volumes:
   postgres_data:

@@ -120,6 +120,12 @@ async def upload_image(silo_id: uuid.UUID, file: UploadFile = File(...)):
                         except Exception as ws_err:
                             logger.warning("WebSocket broadcast failed: %s", ws_err)
 
+                        try:
+                            from app.core.push import send_push_to_silo_owner
+                            await send_push_to_silo_owner(silo_id, "Crop disease detected", message)
+                        except Exception as push_err:
+                            logger.warning("Push notification failed: %s", push_err)
+
     except Exception as e:
         logger.warning(f"Vision service unavailable: {e}")
 

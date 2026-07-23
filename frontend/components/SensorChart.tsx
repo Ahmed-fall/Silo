@@ -2,7 +2,7 @@
 
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from "recharts";
 import { useMemo } from "react";
 
@@ -17,6 +17,10 @@ export interface SensorReading {
 // Internal chart point — merges historical + forecast into one flat structure.
 interface ChartPoint {
   recorded_at: string;
+  /** Epoch ms — the actual plotting coordinate. History is ~20min apart,
+   *  forecast is ~1h apart; a numeric time axis is what makes that visible
+   *  instead of both being squashed into equal-width category slots. */
+  _x: number;
   /** Populated only for historical points */
   temp_hist?: number;
   hum_hist?: number;
@@ -142,11 +146,11 @@ function CustomTooltip({
 }: {
   active?: boolean;
   payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
+  label?: number | string;
 }) {
   if (!active || !payload?.length) return null;
 
-  const dateObj = label ? new Date(label) : null;
+  const dateObj = label != null ? new Date(label) : null;
   const isValidDate = dateObj && !isNaN(dateObj.getTime());
   const time = isValidDate
     ? dateObj!.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -300,8 +304,10 @@ export default function SensorChart({ data, forecastData }: { data: SensorReadin
     );
   }
 
-  const formatTick = (iso: string) =>
-    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formatTick = (ms: number) =>
+    new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  const nowMs = Date.now();
 
   // Memoize forecast and merged data so they're stable between renders
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -311,6 +317,7 @@ export default function SensorChart({ data, forecastData }: { data: SensorReadin
     // Historical points — only populate hist keys
     const histPoints: ChartPoint[] = data.map((d) => ({
       recorded_at: d.recorded_at,
+      _x: new Date(d.recorded_at).getTime(),
       temp_hist: d.temperature,
       hum_hist: d.humidity,
       _isForecast: false,
@@ -321,6 +328,7 @@ export default function SensorChart({ data, forecastData }: { data: SensorReadin
     const last = histPoints[histPoints.length - 1];
     const bridge: ChartPoint = {
       recorded_at: last.recorded_at,
+      _x: last._x,
       temp_hist: last.temp_hist,
       hum_hist: last.hum_hist,
       temp_forecast: last.temp_hist,
@@ -331,12 +339,15 @@ export default function SensorChart({ data, forecastData }: { data: SensorReadin
     // Forecast points — only populate forecast keys
     const forecastPoints: ChartPoint[] = forecast.map((d) => ({
       recorded_at: d.recorded_at,
+      _x: new Date(d.recorded_at).getTime(),
       temp_forecast: d.temperature,
       hum_forecast: d.humidity,
       _isForecast: true,
     }));
 
-    // Replace the last hist point with the bridge, then append forecast
+    // Replace the last hist point with the bridge, then append forecast.
+    // Array order must stay chronological (ascending _x) — Recharts draws
+    // line segments in array order, it does not sort by the axis value.
     return [...histPoints.slice(0, -1), bridge, ...forecastPoints];
   }, [data, forecastData]);
 
@@ -353,7 +364,10 @@ export default function SensorChart({ data, forecastData }: { data: SensorReadin
             vertical={false}
           />
           <XAxis
-            dataKey="recorded_at"
+            dataKey="_x"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
             tickFormatter={formatTick}
             tick={{ fill: "#475569", fontSize: 10, fontFamily: "var(--font-outfit)" }}
             axisLine={false}
@@ -371,6 +385,25 @@ export default function SensorChart({ data, forecastData }: { data: SensorReadin
             cursor={{ stroke: "rgba(148,163,184,0.08)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
           <Legend content={() => null} />
+
+          {/* ── "Now" marker — the real boundary between measured history and
+               projected forecast. Not necessarily the last plotted point:
+               the forecast anchors to max(last reading, now), so if ingest
+               has lagged, this line sits before the forecast's start. ── */}
+          <ReferenceLine
+            x={nowMs}
+            stroke="#94a3b8"
+            strokeDasharray="2 4"
+            strokeWidth={1.5}
+            label={{
+              value: "NOW",
+              position: "insideTopRight",
+              fill: "#64748b",
+              fontSize: 9,
+              fontFamily: "var(--font-outfit)",
+              fontWeight: 700,
+            }}
+          />
 
           {/* ── Historical: Temperature ── */}
           <Line
