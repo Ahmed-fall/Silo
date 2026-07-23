@@ -1,6 +1,18 @@
 "use client";
 
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+
+// WebGL touches `window`/`document` at module load — must never run during SSR.
+const ThermalSilo3D = dynamic(() => import("./ThermalSilo3D"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="rounded-2xl animate-pulse"
+      style={{ width: 340, height: 380, backgroundColor: "var(--accent-subtle)" }}
+    />
+  ),
+});
 
 // ─── Types & defaults ─────────────────────────────────────────────────────────
 
@@ -60,12 +72,6 @@ function tempTheme(t: number): ThermalTheme {
   };
 }
 
-// ─── Dimensions ───────────────────────────────────────────────────────────────
-
-const SILO_W   = 140;   // px — cylinder width
-const BODY_H   = 220;   // px — cylinder body height
-const CAP_H    = 22;    // px — ellipse cap height
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ThermalSiloMapProps {
@@ -77,9 +83,6 @@ export default function ThermalSiloMap({
   zones = DEFAULT_ZONES,
   title = "Thermal Digital Twin",
 }: ThermalSiloMapProps) {
-  const topTheme    = tempTheme(zones[0].temp);
-  const bottomTheme = tempTheme(zones[zones.length - 1].temp);
-
   return (
     <div className="flex flex-col gap-5 h-full">
 
@@ -108,179 +111,11 @@ export default function ThermalSiloMap({
       {/* ── Main layout: silo + legend ── */}
       <div className="flex items-center gap-8 flex-1 justify-center">
 
-        {/* ── The Silo ── */}
-        <div className="relative flex flex-col items-center shrink-0">
-
-          {/* Top cap ellipse */}
-          <div
-            style={{
-              width:        SILO_W,
-              height:       CAP_H,
-              borderRadius: "50%",
-              background:   `linear-gradient(to bottom, ${topTheme.bg}, rgba(255,255,255,0.95))`,
-              border:       `1.5px solid ${topTheme.border}`,
-              boxShadow:    `0 -4px 18px ${topTheme.glowColor}`,
-              zIndex:       2,
-              position:     "relative",
-              marginBottom: -1,
-            }}
-          />
-
-          {/* Cylinder body */}
-          <div
-            style={{
-              width:    SILO_W,
-              height:   BODY_H,
-              position: "relative",
-              overflow: "hidden",
-              borderLeft:  `1.5px solid var(--border-muted)`,
-              borderRight: `1.5px solid var(--border-muted)`,
-            }}
-          >
-            {/* ── Thermal zones ── */}
-            {zones.map((zone, i) => {
-              const theme = tempTheme(zone.temp);
-              const zoneH = zone.heightFraction * BODY_H;
-              return (
-                <motion.div
-                  key={zone.label}
-                  style={{
-                    height:     zoneH,
-                    background: theme.bg,
-                    borderTop:  i === 0 ? "none" : `1px solid var(--border-muted)`,
-                    position:   "relative",
-                    overflow:   "hidden",
-                  }}
-                  // Gentle breathing pulse per zone, staggered
-                  animate={{
-                    background: [
-                      theme.bg,
-                      theme.bg.replace(/[\d.]+\)$/, (m) => `${Math.min(parseFloat(m) + 0.1, 0.9)})`),
-                      theme.bg,
-                    ],
-                  }}
-                  transition={{
-                    duration: 2.8 + i * 0.4,
-                    repeat:   Infinity,
-                    ease:     "easeInOut",
-                    delay:    i * 0.3,
-                  }}
-                >
-                  {/* Inner glow vignette */}
-                  <div
-                    style={{
-                      position:   "absolute",
-                      inset:      0,
-                      background: `radial-gradient(ellipse at 50% 50%, ${theme.glowColor} 0%, transparent 75%)`,
-                      opacity:    0.6,
-                    }}
-                  />
-
-                  {/* Zone temperature label */}
-                  <div
-                    style={{
-                      position:     "absolute",
-                      right:        8,
-                      top:          "50%",
-                      transform:    "translateY(-50%)",
-                      fontSize:     10,
-                      fontFamily:   "var(--font-outfit, system-ui)",
-                      fontWeight:   700,
-                      color:        theme.textColor,
-                      textShadow:   `0 0 8px ${theme.glowColor}`,
-                      whiteSpace:   "nowrap",
-                      lineHeight:   1,
-                    }}
-                  >
-                    {zone.temp}°
-                  </div>
-                </motion.div>
-              );
-            })}
-
-            {/* ── Radar scanner overlay ── */}
-            <motion.div
-              style={{
-                position: "absolute",
-                top:      0,
-                left:     0,
-                right:    0,
-                height:   36,
-                pointerEvents: "none",
-                zIndex:   10,
-              }}
-              animate={{ y: [0, BODY_H - 36, 0] }}
-              transition={{
-                duration:   3.6,
-                repeat:     Infinity,
-                ease:       "easeInOut",
-                repeatType: "loop",
-              }}
-            >
-              {/* Bright scanner line */}
-              <div
-                style={{
-                  height:     1.5,
-                  background: "rgba(52,211,153,0.95)",
-                  boxShadow:  "0 0 6px 1px rgba(52,211,153,0.8), 0 0 14px 2px rgba(52,211,153,0.4)",
-                }}
-              />
-              {/* Fading trail below the line */}
-              <div
-                style={{
-                  height:     34,
-                  background: "linear-gradient(to bottom, rgba(52,211,153,0.20), transparent)",
-                }}
-              />
-            </motion.div>
-
-            {/* ── Left side ruler ticks ── */}
-            {zones.map((_, i) => {
-              const y = zones.slice(0, i + 1).reduce((acc, z) => acc + z.heightFraction * BODY_H, 0);
-              if (i === zones.length - 1) return null;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    position:   "absolute",
-                    left:       0,
-                    top:        y,
-                    width:      6,
-                    height:     1,
-                    background: "rgba(148,163,184,0.3)",
-                  }}
-                />
-              );
-            })}
-          </div>
-
-          {/* Bottom cap ellipse */}
-          <div
-            style={{
-              width:        SILO_W,
-              height:       CAP_H,
-              borderRadius: "50%",
-              background:   `linear-gradient(to top, ${bottomTheme.bg}, rgba(255,255,255,0.95))`,
-              border:       `1.5px solid ${bottomTheme.border}`,
-              boxShadow:    `0 4px 18px ${bottomTheme.glowColor}`,
-              zIndex:       2,
-              position:     "relative",
-              marginTop:    -1,
-            }}
-          />
-
-          {/* Silo floor shadow */}
-          <div
-            style={{
-              width:        SILO_W * 0.75,
-              height:       6,
-              borderRadius: "50%",
-              background:   "rgba(0,0,0,0.06)",
-              filter:       "blur(4px)",
-              marginTop:    4,
-            }}
-          />
+        {/* ── The Silo (3D digital twin) ── */}
+        <div className="shrink-0" style={{ width: 340, height: 380 }}>
+          <ThermalSilo3D zones={zones} />
         </div>
+
 
         {/* ── Zone legend ── */}
         <div className="flex flex-col gap-2.5 min-w-0">
