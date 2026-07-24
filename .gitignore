@@ -25,6 +25,7 @@ env/
 
 # ML models and datasets - too large for git
 ai-vision/app/model/weights/
+ai-vision/data/Wheat_Disease
 
 *.pt
 
