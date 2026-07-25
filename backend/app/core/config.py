@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     # only the existing websocket alert stream fires.
     fcm_server_key: str | None = None
 
+    # WhatsApp (Twilio) / Telegram alert notifications. Optional — if unset,
+    # each sender raises internally and app/core/notify.py logs a warning
+    # per recipient without affecting the websocket/FCM push flow.
+    telegram_bot_token: str | None = None
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    twilio_whatsapp_from: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"),
         extra="ignore"

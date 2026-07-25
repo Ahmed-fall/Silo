@@ -106,6 +106,12 @@ async def ingest_sensor(sensor: SensorCreate):
             except Exception as push_err:
                 logger.warning("Push notification failed: %s", push_err)
 
+            try:
+                from app.core.notify import dispatch_alert_notifications
+                await dispatch_alert_notifications(sensor.silo_id, "Silo risk alert", message)
+            except Exception as notify_err:
+                logger.warning("WhatsApp/Telegram notification dispatch failed: %s", notify_err)
+
     return dict(row)
 
 
@@ -334,5 +340,11 @@ async def _raise_predictive_alert(db, silo_id: uuid.UUID, silo, crossing: Dict[s
             await send_push_to_silo_owner(silo_id, "Silo risk forecast", message)
         except Exception as push_err:
             logger.warning("Push notification failed: %s", push_err)
+
+        try:
+            from app.core.notify import dispatch_alert_notifications
+            await dispatch_alert_notifications(silo_id, "Silo risk forecast", message)
+        except Exception as notify_err:
+            logger.warning("WhatsApp/Telegram notification dispatch failed: %s", notify_err)
     except Exception as e:
         logger.warning("Predictive alerting failed for silo %s: %s", silo_id, e)

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import init_db, close_db
-from app.api import silos, sensors, images, alerts, chat, treatments, soil, auth, users, devices, reports
+from app.api import silos, sensors, images, alerts, chat, treatments, soil, auth, users, devices, reports, notifications
 from app.ws.alerts import manager
 
 @asynccontextmanager
@@ -38,6 +38,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(devices.router)
 app.include_router(reports.router)
+app.include_router(notifications.router)
 
 @app.websocket("/ws/alerts")
 async def websocket_alerts(websocket: WebSocket):
