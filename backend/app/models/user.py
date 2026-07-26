@@ -36,6 +36,9 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     preferred_language: str
+    telegram_chat_id: Optional[str] = None
+    whatsapp_enabled: bool = False
+    telegram_enabled: bool = False
     created_at: datetime
 
     class Config:
@@ -46,3 +49,21 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    """Lets a logged-in farmer opt in/out of WhatsApp/Telegram alerts on top
+    of the existing FCM push, and register their Telegram chat id. WhatsApp
+    reuses the phone number already on the account (set at registration)."""
+    telegram_chat_id: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = None
+    telegram_enabled: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def enabling_requires_contact(self):
+        # Only enforced when the flag is being turned on in this request;
+        # the DB already holds phone/telegram_chat_id from prior calls, so
+        # this is a fast client-facing check, not the sole guard.
+        if self.telegram_enabled and not self.telegram_chat_id:
+            raise ValueError("telegram_chat_id is required to enable Telegram notifications")
+        return self

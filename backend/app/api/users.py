@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.core.notify import send_telegram_message, send_whatsapp_message, format_notification_text
 from app.api.silos import resolve_condition
 from app.core.risk import SEVERITY_MAP
 from app.models.silo import SiloDetailResponse
+from app.models.user import UserResponse, NotificationPreferencesUpdate
 from typing import List
 import asyncio
 
@@ -98,3 +100,68 @@ async def get_my_alerts(
         }
         for row in rows
     ]
+
+
+@router.patch("/me/notifications", response_model=UserResponse)
+async def update_notification_preferences(
+    payload: NotificationPreferencesUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Farmer opts in/out of WhatsApp/Telegram for their own silo alerts, on
+    top of the existing FCM push. WhatsApp always uses the phone number
+    already on the account — there's no separate WhatsApp number field."""
+    if payload.whatsapp_enabled and not current_user.get("phone"):
+        raise HTTPException(
+            status_code=400,
+            detail="Add a phone number to your account before enabling WhatsApp notifications",
+        )
+
+    merged = {
+        "telegram_chat_id": payload.telegram_chat_id if payload.telegram_chat_id is not None else current_user["telegram_chat_id"],
+        "whatsapp_enabled": payload.whatsapp_enabled if payload.whatsapp_enabled is not None else current_user["whatsapp_enabled"],
+        "telegram_enabled": payload.telegram_enabled if payload.telegram_enabled is not None else current_user["telegram_enabled"],
+    }
+    if merged["telegram_enabled"] and not merged["telegram_chat_id"]:
+        raise HTTPException(status_code=400, detail="telegram_chat_id is required to enable Telegram notifications")
+
+    db = await get_db()
+    row = await db.fetchrow(
+        """
+        UPDATE users
+        SET telegram_chat_id = $2, whatsapp_enabled = $3, telegram_enabled = $4
+        WHERE id = $1
+        RETURNING *
+        """,
+        current_user["id"],
+        merged["telegram_chat_id"],
+        merged["whatsapp_enabled"],
+        merged["telegram_enabled"],
+    )
+    return UserResponse(**dict(row))
+
+
+@router.post("/me/notifications/test")
+async def test_notification_preferences(current_user: dict = Depends(get_current_user)):
+    """Lets a farmer confirm their WhatsApp/Telegram setup works before
+    depending on it for real silo alerts."""
+    text = format_notification_text(
+        "Silo Test Notification",
+        "This is a test message confirming your Silo alert notifications are configured correctly.",
+    )
+    results = {}
+    if current_user.get("telegram_enabled") and current_user.get("telegram_chat_id"):
+        try:
+            await send_telegram_message(current_user["telegram_chat_id"], text)
+            results["telegram"] = "sent"
+        except Exception as e:
+            results["telegram"] = f"failed: {e}"
+    if current_user.get("whatsapp_enabled") and current_user.get("phone"):
+        try:
+            await send_whatsapp_message(current_user["phone"], text)
+            results["whatsapp"] = "sent"
+        except Exception as e:
+            results["whatsapp"] = f"failed: {e}"
+
+    if not results:
+        raise HTTPException(status_code=400, detail="No notification channel is enabled on your account")
+    return results

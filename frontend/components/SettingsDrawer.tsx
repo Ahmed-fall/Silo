@@ -5,12 +5,13 @@ import {
   X, Bell, Activity, Zap, LayoutGrid, ChevronRight, RefreshCw,
 } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
+import NotificationRecipientsPanel from "@/components/NotificationRecipientsPanel";
 
 // ─── Animated Toggle Switch ───────────────────────────────────────────────────
 
 type Accent = "accent" | "alert" | "warning";
 
-function Toggle({ on, onToggle, color = "accent" }: {
+export function Toggle({ on, onToggle, color = "accent" }: {
   on: boolean; onToggle: () => void; color?: Accent;
 }) {
   const tracks: Record<Accent, string> = {
@@ -159,6 +160,12 @@ export default function SettingsDrawer({ onClose }: { onClose: () => void }) {
           description="Refetch silo data every 60 seconds."
           on={autoRefresh} onToggle={toggleAutoRefresh} color="warning"
         />
+
+        <p className="px-2 pt-5 pb-2 text-[9px] font-semibold tracking-[0.2em] uppercase" style={{ color: "var(--text-muted)" }}>
+          Alert Recipients
+        </p>
+
+        <NotificationRecipientsPanel />
       </div>
 
       {/* Footer */}
